@@ -27,6 +27,7 @@ python inst_buying_backtest.py --foreign streak --compare   # 기관+외국인 �
 | `--min-inst-net` | 0 | 신호일 기관 순매수 금액 하한 |
 | `--foreign` | off | `streak`: 같은 N일 동안 기관과 외국인이 모두 매일 순매수 / `signal`: 기관 N일 연속 + 신호일에 외국인 순매수 |
 | `--compare` | - | 외국인 조건 off·signal·streak 비교표 출력 |
+| `--robustness` | - | 견고성 검증 실행 (아래 참고) |
 | `--max-per-day` | 0(무제한) | 하루 편입 종목 수 상한 (순매수/거래대금 비율이 큰 순서) |
 
 ## 출력
@@ -36,6 +37,22 @@ python inst_buying_backtest.py --foreign streak --compare   # 기관+외국인 �
 - 연도별·시장별 성과
 - 포트폴리오: 자금을 5개로 나눠 매일 한 몫씩 순환 투자했을 때의 누적수익률, CAGR, MDD
 - `output/trades.csv`, `output/equity.csv`, `output/equity.png`
+
+## 견고성 검증 (`--robustness`)
+
+[`backtest-expert`](.claude/skills/backtest-expert/SKILL.md) 스킬(tradermonty/claude-trading-skills, MIT)의 방법론을 따릅니다. 이 스킬은 `.claude/skills/`에 설치돼 있어 이 저장소에서 Claude Code를 쓰면 자동으로 인식됩니다. 목표는 수익이 가장 큰 설정이 아니라 조건을 바꿔도 **가장 덜 무너지는** 설정을 찾는 것입니다.
+
+1. **파라미터 민감도**: 연속일(2~5) × 보유일(3·5·7·10) 격자에서 평균수익률과 승률을 봅니다. 특정 한 칸만 좋은 '봉우리'가 아니라 넓게 고르게 좋은 '고원'이 있어야 합니다.
+2. **비용 스트레스**: 슬리피지와 수수료를 1.5배, 2배로 늘려도 수익이 남는지 확인합니다.
+3. **연도별 일관성**: 평균수익률이 양(+)인 해가 과반인지 봅니다.
+4. **표본 외 검증**: 앞 2/3 기간에서 고른 최적 파라미터가 뒤 1/3 기간에서도 통하는지 봅니다. OOS/IS가 50% 미만이면 과최적화를 의심합니다.
+5. **정량 판정**: `evaluate_backtest.py`로 100점 만점 점수와 `decision`(DEPLOY/REFINE/ABANDON/VALIDATION_REQUIRED 등)을 냅니다. 결과는 `output/reports/`에 저장됩니다.
+
+검증 기간이 5년 미만이면 판정이 `VALIDATION_REQUIRED`로 막힙니다. 제대로 판정하려면 `--start`를 5년 이상 앞으로 당기세요.
+
+```bash
+python inst_buying_backtest.py --start 20200101 --foreign streak --compare --robustness
+```
 
 ## 한계
 

@@ -1,0 +1,2 @@
+Source: https://github.com/tradermonty/claude-trading-skills (commit 5de030b), skills/backtest-expert
+License: MIT (see LICENSE). Tests directory omitted.

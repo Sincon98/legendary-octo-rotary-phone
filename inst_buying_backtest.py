@@ -34,6 +34,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import subprocess
 import sys
 import time
 from dataclasses import dataclass
@@ -166,8 +167,14 @@ class Config:
     skip_limit_up_open: bool = True  # 진입일 시가가 상한가(+29%↑)면 체결 불가로 제외
 
 
+_WIDE_CACHE: dict = {}
+
+
 def to_wide(data: pd.DataFrame, col: str) -> pd.DataFrame:
-    return data.pivot(index="date", columns="ticker", values=col).sort_index()
+    key = (id(data), len(data), col)                 # 민감도 분석에서 여러 번 돌릴 때 pivot 재사용
+    if key not in _WIDE_CACHE:
+        _WIDE_CACHE[key] = data.pivot(index="date", columns="ticker", values=col).sort_index()
+    return _WIDE_CACHE[key]
 
 
 def consecutive_streak(pos: pd.DataFrame) -> pd.DataFrame:
@@ -419,6 +426,99 @@ def compare_foreign(data, start, cfg: Config):
 
 
 # ---------------------------------------------------------------------------
+# 4. 견고성 검증 (backtest-expert 스킬 방법론: "이익이 최대인 전략이 아니라 가장 덜 깨지는 전략")
+# ---------------------------------------------------------------------------
+EVALUATOR = Path(__file__).resolve().parent / ".claude/skills/backtest-expert/scripts/evaluate_backtest.py"
+
+
+def _summary(cfg: Config, data, start, end=None):
+    tr, _, _, dates = run_backtest(data, start, cfg)
+    if end is not None:
+        tr = tr[tr["entry_date"] <= pd.Timestamp(end)]
+        dates = dates[dates <= pd.Timestamp(end)]
+    if len(tr) == 0:
+        return None, tr, dates
+    return stats(tr["ret"]), tr, dates
+
+
+def robustness(data, start, end, cfg: Config, out_dir: Path):
+    pct = "{:.2%}".format
+    print("\n" + "=" * 64)
+    print(" 견고성 검증 (backtest-expert)")
+    print("=" * 64)
+
+    # (1) 파라미터 민감도: 연속일수 × 보유일 — 좁은 '봉우리'가 아니라 넓은 '고원'이 있어야 함
+    streaks, holds = [2, 3, 4, 5], [3, 5, 7, 10]
+    avg = pd.DataFrame(index=pd.Index(streaks, name="연속일"), columns=pd.Index(holds, name="보유일"), dtype=float)
+    win = avg.copy()
+    for n in streaks:
+        for h in holds:
+            st, *_ = _summary(Config(**{**cfg.__dict__, "streak": n, "hold": h}), data, start)
+            if st:
+                avg.loc[n, h], win.loc[n, h] = st["평균수익률"], st["승률"]
+    print("\n[1] 파라미터 민감도 - 거래당 평균수익률 (비용 차감)")
+    print(avg.map(lambda v: "-" if pd.isna(v) else pct(v)).to_string())
+    print("\n    승률")
+    print(win.map(lambda v: "-" if pd.isna(v) else pct(v)).to_string())
+    pos_cells = (avg > 0).sum().sum()
+    print(f"    → 양(+)의 평균수익률 칸: {pos_cells}/{avg.notna().sum().sum()}")
+
+    # (2) 비용 스트레스: 슬리피지·수수료 1x / 1.5x / 2x
+    print("\n[2] 비용 스트레스")
+    rows = []
+    for m in (1.0, 1.5, 2.0):
+        c2 = Config(**{**cfg.__dict__, "slippage": cfg.slippage * m, "fee": cfg.fee * m})
+        st, tr, dates = _summary(c2, data, start)
+        _, total, cagr, mdd = portfolio(tr, dates, c2.hold)
+        rows.append({"배수": f"{m:.1f}x", "승률": st["승률"], "평균": st["평균수익률"], "누적": total, "MDD": mdd})
+    print(pd.DataFrame(rows).set_index("배수").to_string(formatters={k: pct for k in ("승률", "평균", "누적", "MDD")}))
+
+    # (3) 연도별 일관성
+    base, tr, dates = _summary(cfg, data, start)
+    yearly = tr.groupby(tr["entry_date"].dt.year)["ret"].mean()
+    print(f"\n[3] 연도별 일관성: 평균수익률 양(+)인 해 {int((yearly > 0).sum())}/{len(yearly)}"
+          f"  ({', '.join(f'{y}:{v:+.2%}' for y, v in yearly.items())})")
+
+    # (4) 표본 외 검증: 앞 2/3 기간에서 최적 파라미터 선택 → 뒤 1/3에서 성과 비교
+    t0, t1 = pd.Timestamp(start), pd.Timestamp(end)
+    split = t0 + (t1 - t0) * 2 / 3
+    best, best_avg = None, -np.inf
+    for n in streaks:
+        for h in holds:
+            st, *_ = _summary(Config(**{**cfg.__dict__, "streak": n, "hold": h}), data, start, split)
+            if st and st["거래수"] >= 30 and st["평균수익률"] > best_avg:
+                best, best_avg = (n, h), st["평균수익률"]
+    print(f"\n[4] 표본 외 검증 (IS {t0:%Y-%m-%d}~{split:%Y-%m-%d} / OOS ~{t1:%Y-%m-%d})")
+    if best:
+        oos_tr = run_backtest(data, start, Config(**{**cfg.__dict__, "streak": best[0], "hold": best[1]}))[0]
+        oos = oos_tr[oos_tr["entry_date"] > split]["ret"]
+        ratio = oos.mean() / best_avg if best_avg > 0 else np.nan
+        print(f"    IS 최적: 연속 {best[0]}일 · 보유 {best[1]}일, IS 평균 {best_avg:+.2%}")
+        print(f"    OOS 평균 {oos.mean():+.2%} ({len(oos):,}건) → OOS/IS = {ratio:.0%}"
+              + ("  ⚠ 50% 미만: 과최적화 의심" if not (ratio >= 0.5) else ""))
+        base_oos = tr[tr["entry_date"] > split]["ret"]
+        print(f"    기본 파라미터(연속 {cfg.streak}·보유 {cfg.hold}) OOS 평균 {base_oos.mean():+.2%}")
+
+    # (5) backtest-expert 평가 스크립트로 정량 판정
+    _, _, _, mdd = portfolio(tr, dates, cfg.hold)
+    years = int((t1 - t0).days // 365)
+    n_params = 4 + (cfg.foreign != "off")             # streak, hold, min_value, min_price (+ foreign)
+    args = ["--total-trades", str(base["거래수"]), "--win-rate", f"{base['승률'] * 100:.4f}",
+            "--avg-win-pct", f"{base['평균수익(승)'] * 100:.4f}",
+            "--avg-loss-pct", f"{abs(base['평균손실(패)']) * 100:.4f}",
+            "--max-drawdown-pct", f"{abs(mdd) * 100:.4f}", "--years-tested", str(max(years, 1)),
+            "--num-parameters", str(n_params), "--slippage-tested", "--output-dir", str(out_dir / "reports")]
+    print("\n[5] backtest-expert 정량 평가")
+    if EVALUATOR.exists():
+        res = subprocess.run([sys.executable, str(EVALUATOR), *args], capture_output=True, text=True)
+        print("    " + (res.stdout or res.stderr).strip().replace("\n", "\n    "))
+        if years < 5:
+            print("    ※ 검증 기간 5년 미만이면 VALIDATION_REQUIRED 가 나옵니다. --start 를 5년 이상 앞당겨 보세요.")
+    else:
+        print(f"    평가 스크립트 없음: {EVALUATOR}\n    수동 실행 인자: {' '.join(args)}")
+
+
+# ---------------------------------------------------------------------------
 def main():
     today = datetime.now()
     ap = argparse.ArgumentParser(description="기관 연속 순매수 백테스트")
@@ -437,6 +537,8 @@ def main():
     ap.add_argument("--foreign", choices=["off", "streak", "signal"], default="off",
                     help="streak: N일 모두 기관+외국인 동시 순매수 / signal: 신호일에만 외국인 순매수")
     ap.add_argument("--compare", action="store_true", help="외국인 조건 off/signal/streak 비교표 출력")
+    ap.add_argument("--robustness", action="store_true",
+                    help="파라미터 민감도·비용 스트레스·연도별·표본외 검증 + backtest-expert 평가")
     ap.add_argument("--allow-limit-up-open", action="store_true", help="상한가 시가 진입도 허용")
     ap.add_argument("--cache", default="cache")
     ap.add_argument("--out", default="output")
@@ -458,6 +560,8 @@ def main():
     if trades.empty:
         sys.exit("신호가 없습니다. 필터를 완화해 보세요.")
     report(trades, bench, n_inc, dates, cfg, a.start, a.end, Path(a.out))
+    if a.robustness:
+        robustness(data, a.start, a.end, cfg, Path(a.out))
 
 
 if __name__ == "__main__":
