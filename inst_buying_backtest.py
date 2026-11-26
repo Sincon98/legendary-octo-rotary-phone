@@ -1,0 +1,408 @@
+#!/usr/bin/env python3
+"""
+기관 N일 연속 순매수 → 다음 날 시가 매수 → H거래일 보유 백테스트
+
+전략 (기본값)
+  - 신호일 t : 기관합계 순매수거래대금 > 0 이 3거래일 연속(t-2, t-1, t)
+               연속일수가 '정확히 3'이 되는 날만 신호 (4일째, 5일째 연속은 중복 신호로 보지 않음)
+  - 진입     : t+1 거래일 시가 매수
+  - 청산     : 진입일 포함 5거래일째(t+5) 종가 매도
+  - 비용     : 매수/매도 수수료 각 0.015%, 매도 거래세 0.20%, 슬리피지 편도 0.05%
+
+데이터
+  - pykrx (KRX 정보데이터시스템). pykrx 1.2.x 부터 KRX 계정 로그인이 필요합니다.
+        export KRX_ID=아이디
+        export KRX_PW=비밀번호
+  - 일자별 전종목 시세 + 기관합계 순매수를 하루 단위로 받아 ./cache 에 저장합니다.
+    (첫 실행은 3년치 약 750거래일 × 4회 호출이라 수십 분 걸리고, 이후엔 캐시를 씁니다.)
+
+수익률 계산
+  - 진입일 수익률은 시가→종가, 이후 보유일은 KRX 등락률(FLUC_RT)을 연결해서 계산합니다.
+    등락률은 액면분할·유상증자 등 권리락 기준가를 반영하므로 수정주가 없이도 왜곡이 적습니다.
+
+사용 예
+  python inst_buying_backtest.py                       # 최근 3년, 기본 설정
+  python inst_buying_backtest.py --start 20231127 --end 20261125
+  python inst_buying_backtest.py --streak 3 --hold 5 --min-value 1e9 --max-per-day 20
+  python inst_buying_backtest.py --streak-mode atleast  # 3일 이상 연속인 날마다 신호
+"""
+from __future__ import annotations
+
+import argparse
+import os
+import sys
+import time
+from dataclasses import dataclass
+from datetime import datetime, timedelta
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
+
+MARKETS = ("KOSPI", "KOSDAQ")
+COLS = ["market", "name", "open", "high", "low", "close", "volume", "value", "chg", "inst_net"]
+
+
+# ---------------------------------------------------------------------------
+# 1. 데이터 수집 (pykrx + 일자별 캐시)
+# ---------------------------------------------------------------------------
+def _import_pykrx():
+    """pykrx 는 import 시점에 KRX 로그인을 하므로 환경변수 확인 후 늦게 import 한다."""
+    if not (os.getenv("KRX_ID") and os.getenv("KRX_PW")):
+        sys.exit(
+            "[오류] KRX 로그인 정보가 없습니다.\n"
+            "  pykrx 1.2.x 는 data.krx.co.kr 계정이 필요합니다.\n"
+            "  export KRX_ID=아이디 ; export KRX_PW=비밀번호  후 다시 실행하세요."
+        )
+    from pykrx import stock  # noqa: WPS433
+
+    return stock
+
+
+def _retry(fn, *args, tries: int = 4, pause: float = 1.5):
+    for i in range(tries):
+        try:
+            return fn(*args)
+        except Exception as e:  # 네트워크/파싱 오류
+            if i == tries - 1:
+                raise
+            print(f"    재시도 {i + 1}/{tries - 1}: {e}")
+            time.sleep(pause * (i + 1))
+
+
+def fetch_day(stock, date: str, sleep: float) -> pd.DataFrame:
+    """하루치 KOSPI+KOSDAQ 전종목 시세와 기관합계 순매수거래대금. 휴장일이면 빈 DataFrame."""
+    frames = []
+    for mkt in MARKETS:
+        ohlcv = _retry(stock.get_market_ohlcv_by_ticker, date, mkt)
+        time.sleep(sleep)
+        if ohlcv is None or ohlcv.empty or (ohlcv[["시가", "고가", "저가", "종가"]] == 0).all(axis=None):
+            return pd.DataFrame(columns=COLS)  # 휴장일
+        net = _retry(stock.get_market_net_purchases_of_equities, date, date, mkt, "기관합계")
+        time.sleep(sleep)
+
+        df = pd.DataFrame(
+            {
+                "market": mkt,
+                "open": ohlcv["시가"],
+                "high": ohlcv["고가"],
+                "low": ohlcv["저가"],
+                "close": ohlcv["종가"],
+                "volume": ohlcv["거래량"],
+                "value": ohlcv["거래대금"],
+                "chg": ohlcv["등락률"] if "등락률" in ohlcv else np.nan,
+            }
+        )
+        if net is not None and not net.empty:
+            df["name"] = net["종목명"].reindex(df.index)
+            # 순매수 목록에 없는 종목 = 기관 거래 없음 → 0
+            df["inst_net"] = net["순매수거래대금"].reindex(df.index).fillna(0)
+        else:
+            df["name"] = None
+            df["inst_net"] = 0.0
+        frames.append(df)
+    out = pd.concat(frames)
+    out.index.name = "ticker"
+    return out[COLS]
+
+
+def load_data(start: str, end: str, cache_dir: Path, sleep: float) -> pd.DataFrame:
+    """start~end 평일을 돌며 캐시가 없으면 받아온다. long-format (date, ticker) 반환."""
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    days = pd.bdate_range(start, end).strftime("%Y%m%d")
+    today = datetime.now().strftime("%Y%m%d")
+    stock = None
+    frames = []
+    for i, d in enumerate(days, 1):
+        path = cache_dir / f"{d}.pkl"
+        if path.exists():
+            df = pd.read_pickle(path)
+        else:
+            if stock is None:
+                stock = _import_pykrx()
+            print(f"  [{i}/{len(days)}] {d} 다운로드")
+            df = fetch_day(stock, d, sleep)
+            if d < today:  # 장중 데이터는 캐시하지 않음
+                df.to_pickle(path)
+        if not df.empty:
+            df = df.copy()
+            df["date"] = pd.Timestamp(d)
+            frames.append(df.reset_index())
+    if not frames:
+        sys.exit("[오류] 데이터가 없습니다. 기간/로그인을 확인하세요.")
+    data = pd.concat(frames, ignore_index=True)
+    data["ticker"] = data["ticker"].astype(str)
+    return data
+
+
+# ---------------------------------------------------------------------------
+# 2. 백테스트
+# ---------------------------------------------------------------------------
+@dataclass
+class Config:
+    streak: int = 3                # 연속 순매수 일수
+    streak_mode: str = "exact"     # exact: 연속일수가 정확히 N인 날만 / atleast: N 이상인 모든 날
+    hold: int = 5                  # 보유 거래일 수 (진입일 포함)
+    fee: float = 0.00015           # 편도 수수료
+    tax: float = 0.0020            # 매도 거래세
+    slippage: float = 0.0005       # 편도 슬리피지
+    min_value: float = 1e9         # 신호일 거래대금 하한 (원)
+    min_price: float = 1000        # 신호일 종가 하한 (원)
+    min_inst_net: float = 0        # 신호일 기관 순매수 금액 하한 (원)
+    max_per_day: int = 0           # 하루 최대 편입 종목 수 (0=제한 없음, 신호일 순매수/거래대금 비율 순)
+    skip_limit_up_open: bool = True  # 진입일 시가가 상한가(+29%↑)면 체결 불가로 제외
+
+
+def to_wide(data: pd.DataFrame, col: str) -> pd.DataFrame:
+    return data.pivot(index="date", columns="ticker", values=col).sort_index()
+
+
+def consecutive_streak(pos: pd.DataFrame) -> pd.DataFrame:
+    """True 가 연속된 일수 (False/NaN 이면 0으로 리셋)."""
+    p = pos.fillna(False).astype(int)
+    cs = p.cumsum()
+    last_reset = cs.where(p == 0).ffill().fillna(0)  # 마지막 False 시점의 누적값
+    return (cs - last_reset).astype(int)
+
+
+def forward_trade_returns(o, c, chg, hold: int) -> pd.DataFrame:
+    """신호일 t 기준: t+1 시가 매수 → t+hold 종가 매도의 총수익률(비용 전)."""
+    r = 1 + chg / 100.0
+    entry_open = o.shift(-1)
+    entry_day = (c / o.where(o > 0)).shift(-1)       # 진입일 시가→종가
+    gross = entry_day.copy()
+    for k in range(2, hold + 1):                     # 이후 보유일 등락률 연결
+        gross = gross * r.shift(-k)
+    return gross - 1, entry_open
+
+
+def run_backtest(data: pd.DataFrame, start: str, cfg: Config):
+    o, c, chg = to_wide(data, "open"), to_wide(data, "close"), to_wide(data, "chg")
+    val, net = to_wide(data, "value"), to_wide(data, "inst_net")
+    trading = c.notna() & (val > 0)                  # 상장 & 거래 발생일
+
+    pos = (net > 0) & trading
+    st = consecutive_streak(pos)
+    sig = (st == cfg.streak) if cfg.streak_mode == "exact" else (st >= cfg.streak)
+
+    gross, entry_open = forward_trade_returns(o, c, chg, cfg.hold)
+    gap = entry_open / c - 1                         # 신호일 종가 대비 진입 시가 갭
+
+    # 공통 유니버스 필터 (신호일 기준)
+    universe = trading & (val >= cfg.min_value) & (c >= cfg.min_price) & (entry_open > 0)
+    if cfg.skip_limit_up_open:
+        universe &= gap < 0.29
+    universe.loc[universe.index < pd.Timestamp(start)] = False
+
+    def cost(g):
+        return (1 + g) * (1 - cfg.slippage) * (1 - cfg.fee - cfg.tax) / ((1 + cfg.slippage) * (1 + cfg.fee)) - 1
+
+    # ---- 전략 매매 ----
+    mask = (sig & universe & (net >= cfg.min_inst_net)).fillna(False)
+    m = mask.stack()
+    keys = m[m].index                                # (signal_date, ticker)
+
+    def pick(df):
+        return df.stack(future_stack=True).reindex(keys).to_numpy()
+
+    trades = pd.DataFrame(
+        {
+            "signal_date": keys.get_level_values(0),
+            "ticker": keys.get_level_values(1),
+            "gross": pick(gross),
+            "inst_net": pick(net),
+            "value": pick(val),
+            "signal_close": pick(c),
+            "entry_open": pick(entry_open),
+            "entry_gap": pick(gap),
+        }
+    )
+    n_raw = len(trades)
+    trades = trades.dropna(subset=["gross"]).copy()  # 보유기간 미완료/상장폐지 제외
+    n_incomplete = n_raw - len(trades)
+
+    trades["strength"] = trades["inst_net"] / trades["value"]
+    if cfg.max_per_day > 0:
+        trades = (
+            trades.sort_values("strength", ascending=False)
+            .groupby("signal_date", group_keys=False)
+            .head(cfg.max_per_day)
+        )
+    trades["ret"] = cost(trades["gross"])
+
+    dates = c.index
+    pos_of = pd.Series(np.arange(len(dates)), index=dates)
+    si = pos_of.reindex(trades["signal_date"]).to_numpy()
+    trades["entry_date"] = dates[si + 1]
+    trades["exit_date"] = dates[si + cfg.hold]
+
+    meta = data.drop_duplicates("ticker", keep="last").set_index("ticker")[["name", "market"]]
+    trades = trades.join(meta, on="ticker").sort_values(["signal_date", "ticker"]).reset_index(drop=True)
+
+    # ---- 벤치마크: 같은 필터의 모든 종목-일자에 같은 방식으로 진입했을 때 ----
+    bench = cost(gross.where(universe).stack().dropna())
+
+    period_dates = dates[dates >= pd.Timestamp(start)]
+    return trades, bench, n_incomplete, period_dates
+
+
+# ---------------------------------------------------------------------------
+# 3. 성과 집계
+# ---------------------------------------------------------------------------
+def stats(r: pd.Series) -> dict:
+    if len(r) == 0:
+        return {"거래수": 0}
+    win, loss = r[r > 0], r[r <= 0]
+    pf = win.sum() / -loss.sum() if loss.sum() < 0 else np.inf
+    return {
+        "거래수": len(r),
+        "승률": (r > 0).mean(),
+        "평균수익률": r.mean(),
+        "중앙값": r.median(),
+        "평균수익(승)": win.mean() if len(win) else np.nan,
+        "평균손실(패)": loss.mean() if len(loss) else np.nan,
+        "손익비": (win.mean() / -loss.mean()) if len(win) and len(loss) and loss.mean() < 0 else np.nan,
+        "Profit Factor": pf,
+        "표준편차": r.std(),
+        "최대수익": r.max(),
+        "최대손실": r.min(),
+    }
+
+
+def sleeve_equity(trades: pd.DataFrame, dates: pd.DatetimeIndex, hold: int) -> pd.DataFrame:
+    """
+    자금을 hold 개 슬리브로 나눠, 매 거래일 한 슬리브씩 그날 진입 종목에 동일가중 투자.
+    진입일 i 의 슬리브 = i % hold. 청산일(i+hold-1) 종가에 손익 확정 → 다음 날 같은 슬리브가 재진입.
+    중복 포지션 없이 복리로 굴리는 현실적인 운용 가정. 손익은 청산일에 반영(미실현 평가 없음).
+    """
+    pos = pd.Series(np.arange(len(dates)), index=dates)
+    cohort = trades.groupby("entry_date").agg(ret=("ret", "mean"), exit_date=("exit_date", "first"))
+    cohort["sleeve"] = pos.reindex(cohort.index).to_numpy() % hold
+    by_exit = cohort.groupby("exit_date")
+    sleeves = np.ones(hold) / hold
+    rows = []
+    for d in dates:
+        if d in by_exit.groups:
+            for _, row in by_exit.get_group(d).iterrows():
+                sleeves[int(row["sleeve"])] *= 1 + row["ret"]
+        rows.append((d, sleeves.sum()))
+    eq = pd.DataFrame(rows, columns=["date", "equity"]).set_index("date")
+    eq["drawdown"] = eq["equity"] / eq["equity"].cummax() - 1
+    return eq
+
+
+def fmt(d: dict) -> str:
+    lines = []
+    for k, v in d.items():
+        if isinstance(v, (int, np.integer)):
+            lines.append(f"  {k:<14}{v:>12,d}")
+        elif k in ("손익비", "Profit Factor"):
+            lines.append(f"  {k:<14}{v:>12.2f}")
+        else:
+            lines.append(f"  {k:<14}{v:>11.2%}")
+    return "\n".join(lines)
+
+
+def report(trades, bench, n_incomplete, dates, cfg: Config, start, end, out_dir: Path):
+    print("\n" + "=" * 64)
+    print(f" 기관 {cfg.streak}일 연속 순매수({cfg.streak_mode}) → 익일 시가 매수 → {cfg.hold}거래일 보유")
+    print(f" 기간 {start} ~ {end} | 비용: 수수료 {cfg.fee:.3%}×2, 세금 {cfg.tax:.2%}, 슬리피지 {cfg.slippage:.2%}×2")
+    print(f" 필터: 거래대금≥{cfg.min_value:,.0f}원, 종가≥{cfg.min_price:,.0f}원"
+          + (f", 하루 최대 {cfg.max_per_day}종목" if cfg.max_per_day else ""))
+    print("=" * 64)
+
+    r = trades["ret"]
+    print("\n[전략 - 비용 차감 후, 거래 1건당]")
+    print(fmt(stats(r)))
+    print(f"  (보유기간 미완료/데이터 누락으로 제외된 신호: {n_incomplete:,}건)")
+
+    print("\n[벤치마크 - 같은 필터의 모든 종목·일자에 무조건 진입]")
+    b = stats(bench)
+    print(f"  승률 {b['승률']:.2%} | 평균 {b['평균수익률']:.2%} | 중앙값 {b['중앙값']:.2%} | 표본 {b['거래수']:,}")
+    print(f"  → 전략 초과: 승률 {stats(r)['승률'] - b['승률']:+.2%}p, 평균수익률 {r.mean() - b['평균수익률']:+.2%}p")
+
+    print("\n[연도별]")
+    by_y = trades.groupby(trades["entry_date"].dt.year)["ret"]
+    print(pd.DataFrame({"거래수": by_y.size(), "승률": by_y.apply(lambda x: (x > 0).mean()),
+                        "평균": by_y.mean(), "중앙값": by_y.median()})
+          .to_string(formatters={"승률": "{:.2%}".format, "평균": "{:.2%}".format, "중앙값": "{:.2%}".format}))
+
+    print("\n[시장별]")
+    by_m = trades.groupby("market")["ret"]
+    print(pd.DataFrame({"거래수": by_m.size(), "승률": by_m.apply(lambda x: (x > 0).mean()),
+                        "평균": by_m.mean(), "중앙값": by_m.median()})
+          .to_string(formatters={"승률": "{:.2%}".format, "평균": "{:.2%}".format, "중앙값": "{:.2%}".format}))
+
+    eq = sleeve_equity(trades, dates, cfg.hold)
+    years = max((eq.index[-1] - eq.index[0]).days / 365.25, 1e-9)
+    total = eq["equity"].iloc[-1] - 1
+    cagr = eq["equity"].iloc[-1] ** (1 / years) - 1
+    print(f"\n[포트폴리오 - 자금 {cfg.hold}분할 순환, 신호 종목 동일가중]")
+    print(f"  누적수익률 {total:.2%} | CAGR {cagr:.2%} | MDD {eq['drawdown'].min():.2%}")
+    print(f"  거래일당 평균 신호 수 {trades.groupby('entry_date').size().mean():.1f}종목, "
+          f"신호 발생일 비율 {trades['entry_date'].nunique() / len(dates):.1%}")
+
+    out_dir.mkdir(parents=True, exist_ok=True)
+    trades.to_csv(out_dir / "trades.csv", index=False, encoding="utf-8-sig")
+    eq.to_csv(out_dir / "equity.csv", encoding="utf-8-sig")
+    print(f"\n거래내역: {out_dir / 'trades.csv'}\n자산곡선: {out_dir / 'equity.csv'}")
+
+    try:
+        import matplotlib
+
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+
+        fig, (a1, a2) = plt.subplots(2, 1, figsize=(10, 6), sharex=True, height_ratios=[3, 1])
+        a1.plot(eq.index, eq["equity"], lw=1.4)
+        a1.set_title(f"Institutional {cfg.streak}-day net buying, hold {cfg.hold}d (net of costs)")
+        a1.set_ylabel("Equity")
+        a1.grid(alpha=0.3)
+        a2.fill_between(eq.index, eq["drawdown"], 0, alpha=0.5)
+        a2.set_ylabel("Drawdown")
+        a2.grid(alpha=0.3)
+        fig.tight_layout()
+        fig.savefig(out_dir / "equity.png", dpi=120)
+        print(f"차트:     {out_dir / 'equity.png'}")
+    except ImportError:
+        pass
+
+
+# ---------------------------------------------------------------------------
+def main():
+    today = datetime.now()
+    ap = argparse.ArgumentParser(description="기관 연속 순매수 백테스트")
+    ap.add_argument("--start", default=(today - timedelta(days=365 * 3)).strftime("%Y%m%d"))
+    ap.add_argument("--end", default=(today - timedelta(days=1)).strftime("%Y%m%d"))
+    ap.add_argument("--streak", type=int, default=3)
+    ap.add_argument("--streak-mode", choices=["exact", "atleast"], default="exact")
+    ap.add_argument("--hold", type=int, default=5)
+    ap.add_argument("--fee", type=float, default=0.00015)
+    ap.add_argument("--tax", type=float, default=0.0020)
+    ap.add_argument("--slippage", type=float, default=0.0005)
+    ap.add_argument("--min-value", type=float, default=1e9, help="신호일 거래대금 하한(원)")
+    ap.add_argument("--min-price", type=float, default=1000)
+    ap.add_argument("--min-inst-net", type=float, default=0, help="신호일 기관 순매수 하한(원)")
+    ap.add_argument("--max-per-day", type=int, default=0)
+    ap.add_argument("--allow-limit-up-open", action="store_true", help="상한가 시가 진입도 허용")
+    ap.add_argument("--cache", default="cache")
+    ap.add_argument("--out", default="output")
+    ap.add_argument("--sleep", type=float, default=0.3, help="KRX 호출 간격(초)")
+    a = ap.parse_args()
+
+    cfg = Config(a.streak, a.streak_mode, a.hold, a.fee, a.tax, a.slippage, a.min_value,
+                 a.min_price, a.min_inst_net, a.max_per_day, not a.allow_limit_up_open)
+
+    # 연속 판정용 앞쪽 여유 + 청산용 뒤쪽은 end 까지의 데이터로 처리
+    fetch_start = (pd.Timestamp(a.start) - pd.tseries.offsets.BDay(cfg.streak + 10)).strftime("%Y%m%d")
+    print(f"데이터 로딩 {fetch_start} ~ {a.end} (캐시: {a.cache}/)")
+    data = load_data(fetch_start, a.end, Path(a.cache), a.sleep)
+
+    trades, bench, n_inc, dates = run_backtest(data, a.start, cfg)
+    if trades.empty:
+        sys.exit("신호가 없습니다. 필터를 완화해 보세요.")
+    report(trades, bench, n_inc, dates, cfg, a.start, a.end, Path(a.out))
+
+
+if __name__ == "__main__":
+    main()
