@@ -8,13 +8,16 @@
   - 진입     : t+1 거래일 시가 매수
   - 청산     : 진입일 포함 5거래일째(t+5) 종가 매도
   - 비용     : 매수/매도 수수료 각 0.015%, 매도 거래세 0.20%, 슬리피지 편도 0.05%
+  - 외국인   : --foreign streak  → 같은 N일 동안 기관·외국인 모두 매일 순매수 (쌍끌이)
+               --foreign signal  → 기관 N일 연속 + 신호일에 외국인도 순매수
+               --compare         → off / signal / streak 세 조건 비교표
 
 데이터
   - pykrx (KRX 정보데이터시스템). pykrx 1.2.x 부터 KRX 계정 로그인이 필요합니다.
         export KRX_ID=아이디
         export KRX_PW=비밀번호
   - 일자별 전종목 시세 + 기관합계 순매수를 하루 단위로 받아 ./cache 에 저장합니다.
-    (첫 실행은 3년치 약 750거래일 × 4회 호출이라 수십 분 걸리고, 이후엔 캐시를 씁니다.)
+    (첫 실행은 3년치 약 750거래일 × 6회 호출이라 수십 분 걸리고, 이후엔 캐시를 씁니다.)
 
 수익률 계산
   - 진입일 수익률은 시가→종가, 이후 보유일은 KRX 등락률(FLUC_RT)을 연결해서 계산합니다.
@@ -25,6 +28,7 @@
   python inst_buying_backtest.py --start 20231127 --end 20261125
   python inst_buying_backtest.py --streak 3 --hold 5 --min-value 1e9 --max-per-day 20
   python inst_buying_backtest.py --streak-mode atleast  # 3일 이상 연속인 날마다 신호
+  python inst_buying_backtest.py --foreign streak --compare  # 기관+외국인 동시 순매수, 비교표
 """
 from __future__ import annotations
 
@@ -40,7 +44,7 @@ import numpy as np
 import pandas as pd
 
 MARKETS = ("KOSPI", "KOSDAQ")
-COLS = ["market", "name", "open", "high", "low", "close", "volume", "value", "chg", "inst_net"]
+COLS = ["market", "name", "open", "high", "low", "close", "volume", "value", "chg", "inst_net", "frgn_net"]
 
 
 # ---------------------------------------------------------------------------
@@ -80,6 +84,8 @@ def fetch_day(stock, date: str, sleep: float) -> pd.DataFrame:
             return pd.DataFrame(columns=COLS)  # 휴장일
         net = _retry(stock.get_market_net_purchases_of_equities, date, date, mkt, "기관합계")
         time.sleep(sleep)
+        frgn = _retry(stock.get_market_net_purchases_of_equities, date, date, mkt, "외국인")
+        time.sleep(sleep)
 
         df = pd.DataFrame(
             {
@@ -100,6 +106,11 @@ def fetch_day(stock, date: str, sleep: float) -> pd.DataFrame:
         else:
             df["name"] = None
             df["inst_net"] = 0.0
+        if frgn is not None and not frgn.empty:
+            df["frgn_net"] = frgn["순매수거래대금"].reindex(df.index).fillna(0)
+            df["name"] = df["name"].fillna(frgn["종목명"].reindex(df.index))
+        else:
+            df["frgn_net"] = 0.0
         frames.append(df)
     out = pd.concat(frames)
     out.index.name = "ticker"
@@ -115,9 +126,10 @@ def load_data(start: str, end: str, cache_dir: Path, sleep: float) -> pd.DataFra
     frames = []
     for i, d in enumerate(days, 1):
         path = cache_dir / f"{d}.pkl"
-        if path.exists():
-            df = pd.read_pickle(path)
-        else:
+        df = pd.read_pickle(path) if path.exists() else None
+        if df is not None and not df.empty and "frgn_net" not in df:
+            df = None                                # 구버전 캐시(외국인 없음) → 다시 받기
+        if df is None:
             if stock is None:
                 stock = _import_pykrx()
             print(f"  [{i}/{len(days)}] {d} 다운로드")
@@ -149,6 +161,7 @@ class Config:
     min_value: float = 1e9         # 신호일 거래대금 하한 (원)
     min_price: float = 1000        # 신호일 종가 하한 (원)
     min_inst_net: float = 0        # 신호일 기관 순매수 금액 하한 (원)
+    foreign: str = "off"           # off: 외국인 무관 / streak: N일 모두 외국인도 동시 순매수 / signal: 신호일에만 외국인 순매수
     max_per_day: int = 0           # 하루 최대 편입 종목 수 (0=제한 없음, 신호일 순매수/거래대금 비율 순)
     skip_limit_up_open: bool = True  # 진입일 시가가 상한가(+29%↑)면 체결 불가로 제외
 
@@ -179,11 +192,16 @@ def forward_trade_returns(o, c, chg, hold: int) -> pd.DataFrame:
 def run_backtest(data: pd.DataFrame, start: str, cfg: Config):
     o, c, chg = to_wide(data, "open"), to_wide(data, "close"), to_wide(data, "chg")
     val, net = to_wide(data, "value"), to_wide(data, "inst_net")
+    frgn = to_wide(data, "frgn_net").fillna(0) if "frgn_net" in data else net * 0
     trading = c.notna() & (val > 0)                  # 상장 & 거래 발생일
 
     pos = (net > 0) & trading
+    if cfg.foreign == "streak":                      # 기관·외국인 쌍끌이가 N일 연속
+        pos &= frgn > 0
     st = consecutive_streak(pos)
     sig = (st == cfg.streak) if cfg.streak_mode == "exact" else (st >= cfg.streak)
+    if cfg.foreign == "signal":                      # 기관 N일 연속 + 신호일에 외국인도 순매수
+        sig &= frgn > 0
 
     gross, entry_open = forward_trade_returns(o, c, chg, cfg.hold)
     gap = entry_open / c - 1                         # 신호일 종가 대비 진입 시가 갭
@@ -211,6 +229,7 @@ def run_backtest(data: pd.DataFrame, start: str, cfg: Config):
             "ticker": keys.get_level_values(1),
             "gross": pick(gross),
             "inst_net": pick(net),
+            "frgn_net": pick(frgn),
             "value": pick(val),
             "signal_close": pick(c),
             "entry_open": pick(entry_open),
@@ -303,9 +322,19 @@ def fmt(d: dict) -> str:
     return "\n".join(lines)
 
 
+FOREIGN_LABEL = {"off": "외국인 조건 없음", "streak": "외국인도 같은 기간 매일 순매수", "signal": "신호일 외국인 순매수"}
+
+
+def portfolio(trades, dates, hold):
+    eq = sleeve_equity(trades, dates, hold)
+    years = max((eq.index[-1] - eq.index[0]).days / 365.25, 1e-9)
+    return eq, eq["equity"].iloc[-1] - 1, eq["equity"].iloc[-1] ** (1 / years) - 1, eq["drawdown"].min()
+
+
 def report(trades, bench, n_incomplete, dates, cfg: Config, start, end, out_dir: Path):
     print("\n" + "=" * 64)
-    print(f" 기관 {cfg.streak}일 연속 순매수({cfg.streak_mode}) → 익일 시가 매수 → {cfg.hold}거래일 보유")
+    print(f" 기관 {cfg.streak}일 연속 순매수({cfg.streak_mode}) + {FOREIGN_LABEL[cfg.foreign]}")
+    print(f" → 익일 시가 매수 → {cfg.hold}거래일 보유")
     print(f" 기간 {start} ~ {end} | 비용: 수수료 {cfg.fee:.3%}×2, 세금 {cfg.tax:.2%}, 슬리피지 {cfg.slippage:.2%}×2")
     print(f" 필터: 거래대금≥{cfg.min_value:,.0f}원, 종가≥{cfg.min_price:,.0f}원"
           + (f", 하루 최대 {cfg.max_per_day}종목" if cfg.max_per_day else ""))
@@ -333,10 +362,7 @@ def report(trades, bench, n_incomplete, dates, cfg: Config, start, end, out_dir:
                         "평균": by_m.mean(), "중앙값": by_m.median()})
           .to_string(formatters={"승률": "{:.2%}".format, "평균": "{:.2%}".format, "중앙값": "{:.2%}".format}))
 
-    eq = sleeve_equity(trades, dates, cfg.hold)
-    years = max((eq.index[-1] - eq.index[0]).days / 365.25, 1e-9)
-    total = eq["equity"].iloc[-1] - 1
-    cagr = eq["equity"].iloc[-1] ** (1 / years) - 1
+    eq, total, cagr, _ = portfolio(trades, dates, cfg.hold)
     print(f"\n[포트폴리오 - 자금 {cfg.hold}분할 순환, 신호 종목 동일가중]")
     print(f"  누적수익률 {total:.2%} | CAGR {cagr:.2%} | MDD {eq['drawdown'].min():.2%}")
     print(f"  거래일당 평균 신호 수 {trades.groupby('entry_date').size().mean():.1f}종목, "
@@ -368,6 +394,30 @@ def report(trades, bench, n_incomplete, dates, cfg: Config, start, end, out_dir:
         pass
 
 
+def compare_foreign(data, start, cfg: Config):
+    rows = {}
+    for mode in ("off", "signal", "streak"):
+        c2 = Config(**{**cfg.__dict__, "foreign": mode})
+        tr, bench, _, dates = run_backtest(data, start, c2)
+        if tr.empty:
+            rows[FOREIGN_LABEL[mode]] = {"거래수": 0}
+            continue
+        st = stats(tr["ret"])
+        _, total, cagr, mdd = portfolio(tr, dates, c2.hold)
+        rows[FOREIGN_LABEL[mode]] = {
+            "거래수": st["거래수"], "승률": st["승률"], "평균": st["평균수익률"], "중앙값": st["중앙값"],
+            "손익비": st["손익비"], "PF": st["Profit Factor"], "누적": total, "CAGR": cagr, "MDD": mdd,
+        }
+    rows["벤치마크(무조건 진입)"] = {"거래수": len(bench), "승률": (bench > 0).mean(),
+                               "평균": bench.mean(), "중앙값": bench.median()}
+    df = pd.DataFrame(rows).T
+    pct = "{:.2%}".format
+    print("\n[외국인 조건 비교 - 비용 차감 후]")
+    print(df.to_string(na_rep="-", formatters={
+        "거래수": lambda v: f"{int(v):,}", "승률": pct, "평균": pct, "중앙값": pct,
+        "손익비": "{:.2f}".format, "PF": "{:.2f}".format, "누적": pct, "CAGR": pct, "MDD": pct}))
+
+
 # ---------------------------------------------------------------------------
 def main():
     today = datetime.now()
@@ -384,6 +434,9 @@ def main():
     ap.add_argument("--min-price", type=float, default=1000)
     ap.add_argument("--min-inst-net", type=float, default=0, help="신호일 기관 순매수 하한(원)")
     ap.add_argument("--max-per-day", type=int, default=0)
+    ap.add_argument("--foreign", choices=["off", "streak", "signal"], default="off",
+                    help="streak: N일 모두 기관+외국인 동시 순매수 / signal: 신호일에만 외국인 순매수")
+    ap.add_argument("--compare", action="store_true", help="외국인 조건 off/signal/streak 비교표 출력")
     ap.add_argument("--allow-limit-up-open", action="store_true", help="상한가 시가 진입도 허용")
     ap.add_argument("--cache", default="cache")
     ap.add_argument("--out", default="output")
@@ -391,12 +444,15 @@ def main():
     a = ap.parse_args()
 
     cfg = Config(a.streak, a.streak_mode, a.hold, a.fee, a.tax, a.slippage, a.min_value,
-                 a.min_price, a.min_inst_net, a.max_per_day, not a.allow_limit_up_open)
+                 a.min_price, a.min_inst_net, a.foreign, a.max_per_day, not a.allow_limit_up_open)
 
     # 연속 판정용 앞쪽 여유 + 청산용 뒤쪽은 end 까지의 데이터로 처리
     fetch_start = (pd.Timestamp(a.start) - pd.tseries.offsets.BDay(cfg.streak + 10)).strftime("%Y%m%d")
     print(f"데이터 로딩 {fetch_start} ~ {a.end} (캐시: {a.cache}/)")
     data = load_data(fetch_start, a.end, Path(a.cache), a.sleep)
+
+    if a.compare:
+        compare_foreign(data, a.start, cfg)
 
     trades, bench, n_inc, dates = run_backtest(data, a.start, cfg)
     if trades.empty:

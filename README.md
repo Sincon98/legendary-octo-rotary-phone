@@ -9,9 +9,10 @@ pip install -r requirements.txt
 export KRX_ID=KRX정보데이터시스템_아이디   # pykrx 1.2.x부터 로그인 필요
 export KRX_PW=비밀번호
 python inst_buying_backtest.py            # 기본: 최근 3년
+python inst_buying_backtest.py --foreign streak --compare   # 기관+외국인 동시 순매수 + 비교표
 ```
 
-첫 실행에서는 약 750거래일 × 4회 KRX를 호출하므로 시간이 걸립니다. 받은 데이터는 `cache/`에 날짜별로 저장되고, 다음 실행부터는 이 캐시를 사용합니다.
+첫 실행에서는 약 750거래일 × 6회 KRX를 호출하므로 시간이 걸립니다. 받은 데이터는 `cache/`에 날짜별로 저장되고, 다음 실행부터는 이 캐시를 사용합니다. 외국인 데이터가 없는 이전 캐시는 자동으로 다시 받습니다.
 
 ## 주요 옵션
 
@@ -24,6 +25,8 @@ python inst_buying_backtest.py            # 기본: 최근 3년
 | `--fee / --tax / --slippage` | 0.015% / 0.20% / 0.05% | 비용 |
 | `--min-value` | 10억 원 | 신호일 거래대금 하한 |
 | `--min-inst-net` | 0 | 신호일 기관 순매수 금액 하한 |
+| `--foreign` | off | `streak`: 같은 N일 동안 기관과 외국인이 모두 매일 순매수 / `signal`: 기관 N일 연속 + 신호일에 외국인 순매수 |
+| `--compare` | - | 외국인 조건 off·signal·streak 비교표 출력 |
 | `--max-per-day` | 0(무제한) | 하루 편입 종목 수 상한 (순매수/거래대금 비율이 큰 순서) |
 
 ## 출력
