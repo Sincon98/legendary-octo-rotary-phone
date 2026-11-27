@@ -1,0 +1,3 @@
+Source: https://github.com/Jakeschincariol/trader-skill (commit 5189e79), trader-risk
+License: MIT (see LICENSE). Repo-level tests and fixtures omitted (175 tests passed offline at install, 2026-11-27).
+Local patch (2026-11-27): check.py accepts 6-character KRX codes when config "market": "KRX", and prints amounts in won when "currency": "KRW". US behaviour unchanged; upstream tests still pass.

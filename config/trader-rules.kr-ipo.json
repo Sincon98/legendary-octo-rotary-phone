@@ -1,0 +1,8 @@
+{"name": "성장하면서 이익 내는 신규상장주",
+ "rules": [{"metric": "revenue_growth_yoy", "op": ">=", "value": 20},
+           {"metric": "operating_margin", "op": ">=", "value": 5},
+           {"metric": "demand_competition", "op": ">=", "value": 500}],
+ "rank":  [{"metric": "revenue_growth_yoy", "order": "desc", "weight": 2},
+           {"metric": "operating_margin", "order": "desc", "weight": 1},
+           {"metric": "pe", "order": "asc", "weight": 1}],
+ "missing": "fail"}

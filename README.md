@@ -80,5 +80,6 @@ python ipo_daily_report.py render         # → reports/{날짜}.md, reports/{�
 - 매매표: 손절가 = 현재가 − 2×ATR(8~20%), 1개월 목표가 = 8% 이상 위의 가장 가까운 저항(20일 평균가·20일 고점·공모가), 주수 = 고정비율(관심 1%·관찰 0.75%·보류 0.5% 위험, 종목당 15%·10%·5% 상한, 거래대금 2% 상한). 보고서 페이지에서 총투자금을 입력하면 주수가 다시 계산됩니다.
 - 과거 기록(`python ipo_daily_report.py baserate`): 2024년 이후 상장한 1만원 이하 종목에 같은 규칙을 적용하면 1개월 이익 비율 약 39%, 중간 결과 −8%였습니다. 이 전략에 검증된 우위는 없으며, 규칙은 손실을 줄이는 용도입니다.
 - 제외: 스팩, 우선주, 리츠, 거래정지.
+- 주문 점검: `python ipo_daily_report.py trader-check --budget 10000000` 이 10종목 매수 제안을 `trader/` 파일로 내보내고 [trader-skill](https://github.com/Jakeschincariol/trader-skill)(MIT)의 `trader-risk` 로 PASS/BLOCK 을 판정합니다. 규칙은 `trader/config.json`(처음 실행 시 생성, git 제외)에서 고칩니다. 후보 거르기는 `trader-screener` + `config/trader-rules.kr-ipo.json`. 11개 trader 스킬의 한국 종목 활용법은 [`references/trader-skills-ko.md`](.claude/skills/kr-ipo-daily-report/references/trader-skills-ko.md).
 - 함께 설치한 스킬(tradermonty/claude-trading-skills, MIT): `canslim-screener`(채점 방법론), `position-sizer`(주수 계산), `us-stock-analysis`(보고서 구성), `data-quality-checker`(검수). 이 스킬들의 스크립트는 미국 시장용(FMP API)이라 직접 실행하지 않고 방법론만 씁니다.
 - 투자 권유가 아닙니다.

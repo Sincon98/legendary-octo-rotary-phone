@@ -59,6 +59,10 @@ description: 최근 상장한 코스피·코스닥 종목 중 1만원 이하 종
    `https://claude.ai/artifact/5cFRCd5LjM9LtfWtAEKgR2` 를 읽고, 같은 `url` 로 `reports/latest.html` 을 publish 한다.
    새 URL 을 만들지 않는다.
 
+5-1. **주문 점검** — `python ipo_daily_report.py trader-check` 로 10종목 매수 제안을 trader-risk 규칙에 통과시킨다.
+   BLOCK 이 있으면 그 이유를 노트의 해당 종목 `risks` 와 최종 보고에 한 줄로 적는다. 주문은 절대 넣지 않는다.
+   trader 스킬 11종을 한국 종목에 쓰는 방법은 `references/trader-skills-ko.md`.
+
 6. **커밋** — `data/`, `reports/` 변경을 커밋해 푸시한다(캐시·전일 순위 비교에 다음 날 필요하다).
 
 7. **보고** — 마지막 응답은 짧게: 기준일, 후보 수, 관심·관찰 종목 이름과 점수 한 줄씩, 새로 편입된 종목, 보고서 링크.

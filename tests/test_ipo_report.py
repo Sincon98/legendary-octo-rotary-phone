@@ -124,3 +124,32 @@ def test_plan_and_shares():
     fut.loc[len(bars), "low"] = p["stop"] - 10
     r, how = simulate(fut, len(bars) - 1, p)
     assert how == "stop" and r < 0
+
+
+def test_trader_bridge_and_risk(tmp_path):
+    """10종목 → trader/ 파일 → 패치한 trader-risk 가 한국 코드·원화로 판정."""
+    import json
+    import shutil
+    from ipo_report import trader_bridge
+
+    root = tmp_path
+    skill = Path(__file__).resolve().parents[1] / ".claude/skills/trader-risk"
+    shutil.copytree(skill, root / ".claude/skills/trader-risk")
+    cand = {
+        "code": "0013Y0", "name": "테스트", "market": "KOSDAQ", "listed": "20261022", "grade": "관심",
+        "price": {"close": 4900, "tv_5d": 3e9, "vs_base": -0.37, "ipo_price": 7800},
+        "plan": {"entry": 4900, "stop": 3920, "target": 5570},
+        "score": {"total": 71, "rev_yoy": 0.32, "psr": 5.0}, "fund": {"rev": [["202512", 238]], "op": [["202512", 86]]},
+        "meta": {"demand_competition": 1096.56}, "per": 13.0,
+    }
+    data = {"as_of": "20261127", "candidates": [cand]}
+    ex = trader_bridge.export(root, data, {}, 10_000_000)
+    assert ex["orders"][0]["qty"] == "102"  # 위험 1% / (4900-3920) = 102주
+    r = trader_bridge.risk_check(root)
+    assert r["pass"] == 1 and r["block"] == 0
+    cfg = json.loads((root / "trader/config.json").read_text())
+    cfg["blocked"] = ["0013Y0"]
+    (root / "trader/config.json").write_text(json.dumps(cfg))
+    trader_bridge.export(root, data, {})  # 사용자가 고친 규칙은 유지
+    r = trader_bridge.risk_check(root)
+    assert r["block"] == 1 and "blocked" in r["results"][0]["reasons"][0]
