@@ -2,3 +2,4 @@ pykrx>=1.2.9
 pandas>=2.1
 numpy
 matplotlib
+requests

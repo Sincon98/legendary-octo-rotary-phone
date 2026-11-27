@@ -61,3 +61,22 @@ python inst_buying_backtest.py --start 20200101 --foreign streak --compare --rob
 - 체결 가능 수량(호가 잔량)은 고려하지 않습니다.
 
 테스트(KRX 접속 불필요): `python -m pytest tests -q`
+
+---
+
+# 신규상장 1만원 이하 성장주 일일 보고서
+
+최근 90일 안에 상장한 코스피·코스닥 보통주 중 종가 1만원 이하 종목을 매일 채점하고, 공모 정보와 사업 내용을 조사해 보고서를 만듭니다. 절차 전체는 [`kr-ipo-daily-report`](.claude/skills/kr-ipo-daily-report/SKILL.md) 스킬에 있습니다.
+
+```bash
+python ipo_daily_report.py collect        # 수집·채점 → data/candidates/{날짜}.json
+python ipo_daily_report.py pending-meta   # 공모가 등 미확인 종목
+python ipo_daily_report.py render         # → reports/{날짜}.md, reports/{날짜}.html, reports/latest.html
+```
+
+- 데이터: 네이버 증권(전 종목 목록, 상장일=차트 첫 거래일, 일봉, 재무, 수급). KRX 로그인 불필요.
+- 공모가·수요예측 경쟁률·의무보유확약: `data/ipo_meta.json` (웹 검색으로 채우고 출처 URL 기록).
+- 채점(100점): 성장성 30 · 수익성 15 · 상장후 흐름 20 · 수급 15 · 공모 품질 10 · 밸류 10, 보호예수 해제 임박·과도한 변동성·고부채 감점. 65점 이상 관심, 50점 이상 관찰.
+- 제외: 스팩, 우선주, 리츠, 거래정지.
+- 함께 설치한 스킬(tradermonty/claude-trading-skills, MIT): `canslim-screener`(채점 방법론), `us-stock-analysis`(보고서 구성), `data-quality-checker`(검수). 세 스킬의 스크립트는 미국 시장용(FMP API)이라 직접 실행하지 않고 방법론만 씁니다.
+- 투자 권유가 아닙니다.
