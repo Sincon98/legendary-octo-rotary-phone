@@ -9,6 +9,7 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 from . import listings, naver
+from .plan import make_plan
 from .score import grade, parse_fundamentals, price_metrics, score
 
 KST = ZoneInfo("Asia/Seoul")
@@ -88,6 +89,7 @@ def analyze(c: dict, as_of_hint: str, meta: dict) -> dict:
             "debt_ratio": fu.debt_ratio,
         },
         "flows": flows,
+        "plan": make_plan(bars, naver.to_num(m.get("ipo_price"))),
         "meta": m,
         "score": sc,
         "grade": grade(sc["total"]),

@@ -77,6 +77,8 @@ python ipo_daily_report.py render         # → reports/{날짜}.md, reports/{�
 - 데이터: 네이버 증권(전 종목 목록, 상장일=차트 첫 거래일, 일봉, 재무, 수급). KRX 로그인 불필요.
 - 공모가·수요예측 경쟁률·의무보유확약: `data/ipo_meta.json` (웹 검색으로 채우고 출처 URL 기록).
 - 채점(100점): 성장성 30 · 수익성 15 · 상장후 흐름 20 · 수급 15 · 공모 품질 10 · 밸류 10, 보호예수 해제 임박·과도한 변동성·고부채 감점. 65점 이상 관심, 50점 이상 관찰.
+- 매매표: 손절가 = 현재가 − 2×ATR(8~20%), 1개월 목표가 = 8% 이상 위의 가장 가까운 저항(20일 평균가·20일 고점·공모가), 주수 = 고정비율(관심 1%·관찰 0.75%·보류 0.5% 위험, 종목당 15%·10%·5% 상한, 거래대금 2% 상한). 보고서 페이지에서 총투자금을 입력하면 주수가 다시 계산됩니다.
+- 과거 기록(`python ipo_daily_report.py baserate`): 2024년 이후 상장한 1만원 이하 종목에 같은 규칙을 적용하면 1개월 이익 비율 약 39%, 중간 결과 −8%였습니다. 이 전략에 검증된 우위는 없으며, 규칙은 손실을 줄이는 용도입니다.
 - 제외: 스팩, 우선주, 리츠, 거래정지.
-- 함께 설치한 스킬(tradermonty/claude-trading-skills, MIT): `canslim-screener`(채점 방법론), `us-stock-analysis`(보고서 구성), `data-quality-checker`(검수). 세 스킬의 스크립트는 미국 시장용(FMP API)이라 직접 실행하지 않고 방법론만 씁니다.
+- 함께 설치한 스킬(tradermonty/claude-trading-skills, MIT): `canslim-screener`(채점 방법론), `position-sizer`(주수 계산), `us-stock-analysis`(보고서 구성), `data-quality-checker`(검수). 이 스킬들의 스크립트는 미국 시장용(FMP API)이라 직접 실행하지 않고 방법론만 씁니다.
 - 투자 권유가 아닙니다.

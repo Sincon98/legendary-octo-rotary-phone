@@ -3,238 +3,395 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans+KR:wght@400;600;700&display=swap">
 <style>
-/* 레이아웃: 한 줄 기둥(본문 72rem) — 시장 띠 → 결론 → 주목 종목 카드 → 전체 표 → 방법 */
+/* 레이아웃: 한 기둥(64rem). 결론 → 과거 기록 3수치 → 총자금 입력 → 10종목 매매표(행=종목) → 나머지·기준 */
 :root{
-  --paper:#f6f7f9; --panel:#ffffff; --ink:#15202b; --sub:#5b6875; --line:#dde2e8;
-  --accent:#1f5f8b; --up:#d1343a; --down:#1f62c9;
-  --g-watch:#0f7a55; --g-obs:#a46200; --g-hold:#6b7682;
-  --chip-watch:#e3f4ec; --chip-obs:#fbf0dc; --chip-hold:#eceff2;
-  --seg1:#1f5f8b; --seg2:#3f86b5; --seg3:#79aed2; --seg4:#5d7f99; --seg5:#9fb7c9; --seg6:#c3d4e1;
+  --paper:#f5f6f8; --panel:#ffffff; --ink:#16202a; --sub:#5a6774; --line:#dfe3e8; --soft:#eef1f4;
+  --accent:#1d5d8a; --up:#cf2e35; --down:#1f5fc4;
+  --g-watch:#0d7350; --g-obs:#9a5b00; --g-hold:#66717c;
+  --chip-watch:#e1f3ea; --chip-obs:#fbefd9; --chip-hold:#eceff2;
   --f-body:"IBM Plex Sans KR","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
   --f-num:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
-  --paper:#0f151b; --panel:#16202a; --ink:#e4eaf0; --sub:#93a2b0; --line:#28343f;
-  --accent:#6fb0dc; --up:#ff6b6f; --down:#6aa2ff;
-  --g-watch:#4fd19c; --g-obs:#f0b04d; --g-hold:#93a2b0;
-  --chip-watch:#123526; --chip-obs:#3a2a0f; --chip-hold:#222d37;
-  --seg1:#6fb0dc; --seg2:#4f8fbd; --seg3:#3a7099; --seg4:#8aa6bb; --seg5:#5b7487; --seg6:#3f5262;
-  color-scheme:dark}}
+  --paper:#0f151b; --panel:#17212b; --ink:#e6ebf0; --sub:#97a5b2; --line:#2a3642; --soft:#1d2833;
+  --accent:#72b2de; --up:#ff6b70; --down:#6ca4ff;
+  --g-watch:#52d29f; --g-obs:#f1b252; --g-hold:#97a5b2;
+  --chip-watch:#123526; --chip-obs:#3a2a0f; --chip-hold:#222d37; color-scheme:dark}}
 :root[data-theme="dark"]{
-  --paper:#0f151b; --panel:#16202a; --ink:#e4eaf0; --sub:#93a2b0; --line:#28343f;
-  --accent:#6fb0dc; --up:#ff6b6f; --down:#6aa2ff;
-  --g-watch:#4fd19c; --g-obs:#f0b04d; --g-hold:#93a2b0;
-  --chip-watch:#123526; --chip-obs:#3a2a0f; --chip-hold:#222d37;
-  --seg1:#6fb0dc; --seg2:#4f8fbd; --seg3:#3a7099; --seg4:#8aa6bb; --seg5:#5b7487; --seg6:#3f5262;
-  color-scheme:dark}
+  --paper:#0f151b; --panel:#17212b; --ink:#e6ebf0; --sub:#97a5b2; --line:#2a3642; --soft:#1d2833;
+  --accent:#72b2de; --up:#ff6b70; --down:#6ca4ff;
+  --g-watch:#52d29f; --g-obs:#f1b252; --g-hold:#97a5b2;
+  --chip-watch:#123526; --chip-obs:#3a2a0f; --chip-hold:#222d37; color-scheme:dark}
 *{box-sizing:border-box}
-body{background:var(--paper);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.6;word-break:keep-all;overflow-wrap:break-word;
-  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 56px}
-.wrap{max-width:72rem;margin:0 auto;display:flex;flex-direction:column;gap:28px}
+body{background:var(--paper);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.65;
+  word-break:keep-all;overflow-wrap:break-word;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 64px}
+.wrap{max-width:64rem;margin:0 auto;display:flex;flex-direction:column;gap:32px}
 h1,h2,h3{text-wrap:balance;margin:0;line-height:1.3}
-h1{font-size:1.6rem;font-weight:700;letter-spacing:-.01em}
-h2{font-size:1.05rem;font-weight:700;color:var(--sub);letter-spacing:.04em}
-h3{font-size:1.15rem;font-weight:700}
+h1{font-size:1.55rem;font-weight:700}
+h2{font-size:1.15rem;font-weight:700}
+h3{font-size:1.1rem;font-weight:700}
 a{color:var(--accent)}
-a:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .num{font-family:var(--f-num);font-variant-numeric:tabular-nums}
 .up{color:var(--up)} .down{color:var(--down)}
-header{display:flex;flex-direction:column;gap:6px}
-.eyebrow{font-size:.78rem;letter-spacing:.08em;color:var(--sub);font-weight:600}
-.scope{color:var(--sub);max-width:65ch}
-.market{display:flex;flex-wrap:wrap;gap:12px}
-.idx{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 14px;display:flex;gap:14px;align-items:baseline;flex-wrap:wrap}
-.idx b{font-size:.9rem}
-.idx .v{font-size:1.05rem}
-.idx .m{font-size:.82rem;color:var(--sub)}
-.summary{font-size:1.05rem;max-width:68ch}
-.summary p{margin:0 0 .6em}
-.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,30rem),1fr));gap:16px}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:18px;display:flex;flex-direction:column;gap:12px;min-width:0}
-.card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
-.card-top .who{min-width:0}
-.code{color:var(--sub);font-size:.82rem}
-.biz{color:var(--sub);font-size:.9rem;margin-top:2px}
-.score{text-align:right;flex:none}
-.score .t{font-size:1.7rem;font-weight:600;line-height:1}
-.score .u{font-size:.75rem;color:var(--sub)}
-.chip{display:inline-block;font-size:.75rem;font-weight:700;border-radius:999px;padding:2px 10px;letter-spacing:.02em}
+.muted{color:var(--sub);font-size:.9rem}
+section{display:flex;flex-direction:column;gap:14px}
+header{display:flex;flex-direction:column;gap:8px}
+.eyebrow{font-size:.8rem;letter-spacing:.06em;color:var(--sub);font-weight:600}
+.lead{font-size:1.12rem;max-width:62ch;margin:0}
+.market{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:.9rem;color:var(--sub)}
+.market b{color:var(--ink);font-weight:600}
+.facts3{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,13rem),1fr));gap:12px}
+.fact{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:4px}
+.fact .big{font-size:2rem;font-weight:600;line-height:1.1}
+.fact .lab{font-size:.88rem;color:var(--sub)}
+.note{background:var(--soft);border-radius:10px;padding:14px 16px;max-width:none;margin:0}
+.budget{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:12px}
+.budget-row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.budget label{font-weight:600}
+.budget input{font:inherit;font-family:var(--f-num);font-size:1.1rem;width:11rem;max-width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--paper);color:var(--ink);text-align:right}
+.quick{display:flex;flex-wrap:wrap;gap:6px}
+.quick button{font:inherit;font-size:.88rem;padding:6px 12px;border-radius:999px;border:1px solid var(--line);background:var(--paper);color:var(--ink);cursor:pointer}
+.quick button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--panel)}
+.totals{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,11rem),1fr));gap:8px 16px}
+.totals div{display:flex;flex-direction:column}
+.totals dt{font-size:.8rem;color:var(--sub)} .totals dd{margin:0;font-size:1.15rem}
+.picks{display:flex;flex-direction:column;gap:12px;list-style:none;margin:0;padding:0}
+.pick{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 18px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.pick-head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.rank{font-family:var(--f-num);color:var(--sub);font-size:1rem;min-width:1.6rem}
+.pick-head h3 a{color:var(--ink);text-decoration:none}
+.pick-head h3 a:hover{text-decoration:underline}
+.code{color:var(--sub);font-size:.85rem}
+.score{margin-left:auto;font-size:.9rem;color:var(--sub)}
+.score b{font-family:var(--f-num);color:var(--ink);font-size:1.05rem}
+.chip{display:inline-block;font-size:.78rem;font-weight:700;border-radius:999px;padding:1px 10px}
 .chip.관심{background:var(--chip-watch);color:var(--g-watch)}
 .chip.관찰{background:var(--chip-obs);color:var(--g-obs)}
 .chip.보류{background:var(--chip-hold);color:var(--g-hold)}
-.facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(7.5rem,1fr));gap:8px 14px;margin:0}
-.facts div{display:flex;flex-direction:column}
-.facts dt{font-size:.72rem;color:var(--sub);letter-spacing:.04em}
-.facts dd{margin:0;font-size:.95rem}
-.bar{display:flex;height:10px;border-radius:5px;overflow:hidden;background:var(--line)}
-.bar span{display:block;height:100%}
-.legend{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:.76rem;color:var(--sub)}
-.legend i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:4px;vertical-align:baseline}
-.block{font-size:.9rem}
-.block h4{margin:0 0 2px;font-size:.78rem;color:var(--sub);letter-spacing:.04em}
-.block ul{margin:0;padding-left:1.1em}
-.flags{display:flex;flex-wrap:wrap;gap:6px}
-.flag{font-size:.76rem;border:1px solid var(--line);border-radius:6px;padding:1px 8px;color:var(--sub)}
-.flag.warn{border-color:var(--g-obs);color:var(--g-obs)}
-.src{font-size:.78rem;color:var(--sub);overflow-wrap:anywhere}
-.tbl{overflow-x:auto;background:var(--panel);border:1px solid var(--line);border-radius:10px}
-table{border-collapse:collapse;width:100%;font-size:.88rem;min-width:44rem}
-th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
-th{font-size:.74rem;color:var(--sub);letter-spacing:.04em;font-weight:600}
-td.r,th.r{text-align:right}
-tr:last-child td{border-bottom:0}
-.muted{color:var(--sub);font-size:.88rem}
-footer{color:var(--sub);font-size:.82rem;max-width:72ch;display:flex;flex-direction:column;gap:6px}
+.why{margin:0;max-width:70ch}
+.biz{color:var(--sub);font-size:.92rem}
+.ticket{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:0;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.ticket div{padding:10px 12px;display:flex;flex-direction:column;gap:2px;border-right:1px solid var(--line);min-width:0}
+.ticket div:last-child{border-right:0}
+.ticket dt{font-size:.78rem;color:var(--sub)}
+.ticket dd{margin:0;font-size:1.05rem}
+.ticket .buy{background:var(--soft)}
+.ticket .buy dd{font-size:1.25rem;font-weight:600}
+.ticket small{font-size:.8rem;color:var(--sub);font-family:var(--f-body)}
+@media (max-width:640px){
+  .ticket{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .ticket div{border-right:0;border-bottom:1px solid var(--line)}
+  .ticket .buy{grid-column:1 / -1}
+  .ticket div:nth-child(2n+1):not(.buy){border-right:1px solid var(--line)}
+  .score{margin-left:0;width:100%}
+}
+.pros{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,16rem),1fr));gap:10px 20px;font-size:.93rem}
+.pros h4{margin:0 0 2px;font-size:.82rem;color:var(--sub);font-weight:600}
+.pros ul{margin:0;padding-left:1.1em}
+.pros li{margin:2px 0}
+.src{font-size:.8rem;color:var(--sub)}
+.rest{font-size:.92rem;color:var(--sub);margin:0}
+footer{color:var(--sub);font-size:.86rem;display:flex;flex-direction:column;gap:6px;max-width:72ch}
 footer p{margin:0}
 </style>
 <div class="wrap">
 <header>
-  <div class="eyebrow">신규상장 · 10,000원 이하 · 일일 스크리닝</div>
-  <h1>2026년 11월 27일(금) 장중 12:31 기준</h1>
-  <div class="scope">최근 90일 안에 상장한 코스피·코스닥 보통주 중 종가 10,000원 이하 종목 18개를 채점했습니다. 스팩·우선주·리츠는 뺐습니다.</div>
+  <div class="eyebrow">신규상장 · 1만원 이하 · 오늘의 10종목</div>
+  <h1>2026년 11월 27일(금) 장중 12:46 기준</h1>
+  <p class="lead">점수 상위 10종목과 종목별 매수 주수·손절가·1개월 목표가를 정리했습니다. 실적이 받쳐 주는 곳은 멜콘·엠에스바이오 두 곳이고, 나머지는 관찰 수준입니다. 과거 같은 조건의 종목을 한 달 들고 있었을 때 이익으로 끝난 경우가 10번 중 4번 정도라, 비중을 작게 두고 손절가를 꼭 지키는 전제로 보세요.</p>
+  <div class="market"><span><b>코스피</b> <span class="num">4,875.61</span> 오늘 <span class="num up">+3.5%</span> · 20일 <span class="num down">-14.9%</span></span> <span><b>코스닥</b> <span class="num">696.71</span> 오늘 <span class="num up">+6.3%</span> · 20일 <span class="num down">-3.8%</span></span></div>
+  <p class="muted" style="margin:0">코스피는 최근 20일 −15%로 약세이고 코스닥은 오늘 반등했습니다. 신규상장주는 상장 직후 급등했다가 빠지는 흐름이 이어지고 있습니다.</p>
 </header>
-<section class="market" aria-label="시장 환경"><div class="idx"><b>코스피</b><span class="v num">4,872.86</span><span class="m">전일 <span class="num up">+3.4%</span> · 20일 <span class="num down">-15.0%</span> · 20일선 아래</span></div><div class="idx"><b>코스닥</b><span class="v num">695.36</span><span class="m">전일 <span class="num up">+6.0%</span> · 20일 <span class="num down">-4.0%</span> · 20일선 위</span></div></section>
-<section class="summary"><p>최근 90일 신규상장 1만원 이하 18종목 가운데 실적 성장과 공모 수요가 함께 확인되는 곳은 멜콘·엠에스바이오 두 곳입니다. 다만 두 종목 모두 공모가를 30~40% 밑돌고 있고, 1만원 이하 신규상장주 대부분이 공모가 아래에서 거래됩니다. 지금은 &#x27;싸게 살 기회&#x27;보다 &#x27;바닥을 확인하는 구간&#x27;으로 보고, 분할 접근과 보호예수 해제일 확인이 먼저입니다.</p><p>코스피는 20일 동안 약 15% 빠져 20일선 아래, 코스닥은 오늘 6% 반등했지만 50일선 아래입니다. 공모주 전반으로 상장 후 수급이 이어지지 못하는 흐름이 보도되고 있어(상장 첫날 급등 후 급락) 신규상장주는 시장 반등이 확인될 때까지 비중을 작게 가져가는 편이 낫습니다. 이 기간 상장 종목 31개 중 스팩 6개는 뺐습니다.</p></section>
-<section style="display:flex;flex-direction:column;gap:12px"><h2>주목 종목</h2><div class="cards">
-<article class="card">
-  <div class="card-top">
-    <div class="who">
-      <h3><a href="https://m.stock.naver.com/domestic/stock/179880" target="_blank" rel="noopener">멜콘</a></h3>
-      <div class="code num">179880 · KOSDAQ</div>
-      <div class="biz">반도체 노광장비용 전원·제어 장비 (대표주관 대신증권)</div>
-    </div>
-    <div class="score"><span class="chip 관심">관심</span><div class="t num">72</div><div class="u">/ 100점</div></div>
+
+<section aria-labelledby="h-base">
+  <h2 id="h-base">한 달 보유하면 어떻게 됐나</h2>
+  <div class="facts3">
+    <div class="fact"><span class="big num">39%</span><span class="lab">이익으로 끝난 비율<br>(10번 중 4번)</span></div>
+    <div class="fact"><span class="big num down">-8%</span><span class="lab">중간 결과<br>(평균 -1.6%)</span></div>
+    <div class="fact"><span class="big num">-20%</span><span class="lab">손절을 지켰을 때 최악 5%<br>(안 지키면 -34%)</span></div>
   </div>
-  <dl class="facts"><div><dt>상장일</dt><dd>2026-10-15</dd></div><div><dt>종가</dt><dd><span class="num">9,050</span>원</dd></div><div><dt>시가총액</dt><dd>1,140억원</dd></div><div><dt>공모가</dt><dd><span class="num">12,300</span>원 · <span class="num down">-26%</span></dd></div><div><dt>상장후 고점 대비</dt><dd><span class="num down">-69%</span></dd></div><div><dt>5일 평균 거래대금</dt><dd>26억원</dd></div><div><dt>수요예측 경쟁률</dt><dd><span class="num">1,137</span> : 1</dd></div><div><dt>의무보유확약</dt><dd><span class="num">36.1</span>%</dd></div></dl>
-  <div><div class="bar" role="img" aria-label="점수 구성"><span style="width:24.0%;background:var(--seg1)" title="성장성 24/30"></span><span style="width:13.0%;background:var(--seg2)" title="수익성 13/15"></span><span style="width:12.0%;background:var(--seg3)" title="상장후 흐름 12/20"></span><span style="width:12.0%;background:var(--seg4)" title="수급 12/15"></span><span style="width:9.0%;background:var(--seg5)" title="공모 품질 9/10"></span><span style="width:5.0%;background:var(--seg6)" title="밸류 5/10"></span></div><div class="legend"><span><i style="background:var(--seg1)"></i>성장성 <span class="num">24/30</span></span><span><i style="background:var(--seg2)"></i>수익성 <span class="num">13/15</span></span><span><i style="background:var(--seg3)"></i>상장후 흐름 <span class="num">12/20</span></span><span><i style="background:var(--seg4)"></i>수급 <span class="num">12/15</span></span><span><i style="background:var(--seg5)"></i>공모 품질 <span class="num">9/10</span></span><span><i style="background:var(--seg6)"></i>밸류 <span class="num">5/10</span></span><span>감점 <span class="num">-3</span></span></div></div>
-  <div class="block"><h4>정량 근거</h4>최근 연매출 성장률 +67% · 최근 분기 매출 YoY +60% · 영업이익률 14.8% · 공모가 대비 -26%, 고점 대비 -69% · 최근 기관·외국인 동반 순매수 · PER 20.2배</div>
-  <div class="block"><h4>성장 포인트</h4><ul><li>최근 연매출 +67%, 최근 분기 매출 YoY +60%, 영업이익률 약 15%로 이익을 내며 성장 중</li><li>수요예측 1,137:1, 신청 수량 기준 확약 36%로 기관 수요가 이번 후보 중 가장 탄탄함</li><li>최대주주 지분 대부분이 30개월 보호예수, 상장 직후 유통물량 약 34.5%</li><li>최근 기관·외국인 동반 순매수</li></ul></div><div class="block"><h4>리스크</h4><ul><li>공모가 12,300원 대비 약 27% 아래, 상장일 고점(27,400원) 대비 -70%</li><li>일간 변동성 12%로 매우 큼</li><li>상장일 코스닥 급락(사이드카)과 15일 확약 물량 해제(10/30) 이후 하락 추세가 이어짐</li></ul></div><div class="block"><h4>일정·촉매</h4><ul><li>보호예수 3개월 해제 2027-01-15 전후</li><li>4분기 실적 발표(2027년 2~3월)</li></ul></div>
-  <div class="flags"><span class="flag warn">일간 변동성 12% (매우 큼)</span></div>
-  <div class="src">출처 <a href="https://alphasquare.co.kr/home/insight/posts/e0842819-8a2a-41da-9e1a-f909d512d135" target="_blank" rel="noopener">alphasquare.co.kr</a> · <a href="https://alphasquare.co.kr/home/insight/posts/5f0b85e7-fbd5-4e48-a40b-e20429338b97" target="_blank" rel="noopener">alphasquare.co.kr</a></div>
-</article>
-<article class="card">
-  <div class="card-top">
-    <div class="who">
-      <h3><a href="https://m.stock.naver.com/domestic/stock/0013Y0" target="_blank" rel="noopener">엠에스바이오</a></h3>
-      <div class="code num">0013Y0 · KOSDAQ</div>
-      <div class="biz">인체조직 이식재·의료기기 (치과 마이본, 안과 엠에스암니온, 피부 제너필-에이치 등)</div>
-    </div>
-    <div class="score"><span class="chip 관심">관심</span><div class="t num">71</div><div class="u">/ 100점</div></div>
-  </div>
-  <dl class="facts"><div><dt>상장일</dt><dd>2026-10-22</dd></div><div><dt>종가</dt><dd><span class="num">4,880</span>원</dd></div><div><dt>시가총액</dt><dd>1,327억원</dd></div><div><dt>공모가</dt><dd><span class="num">7,800</span>원 · <span class="num down">-37%</span></dd></div><div><dt>상장후 고점 대비</dt><dd><span class="num down">-75%</span></dd></div><div><dt>5일 평균 거래대금</dt><dd>35억원</dd></div><div><dt>수요예측 경쟁률</dt><dd><span class="num">1,097</span> : 1</dd></div><div><dt>의무보유확약</dt><dd><span class="num">30.6</span>%</dd></div></dl>
-  <div><div class="bar" role="img" aria-label="점수 구성"><span style="width:23.0%;background:var(--seg1)" title="성장성 23/30"></span><span style="width:15.0%;background:var(--seg2)" title="수익성 15/15"></span><span style="width:10.0%;background:var(--seg3)" title="상장후 흐름 10/20"></span><span style="width:9.0%;background:var(--seg4)" title="수급 9/15"></span><span style="width:9.0%;background:var(--seg5)" title="공모 품질 9/10"></span><span style="width:8.0%;background:var(--seg6)" title="밸류 8/10"></span></div><div class="legend"><span><i style="background:var(--seg1)"></i>성장성 <span class="num">23/30</span></span><span><i style="background:var(--seg2)"></i>수익성 <span class="num">15/15</span></span><span><i style="background:var(--seg3)"></i>상장후 흐름 <span class="num">10/20</span></span><span><i style="background:var(--seg4)"></i>수급 <span class="num">9/15</span></span><span><i style="background:var(--seg5)"></i>공모 품질 <span class="num">9/10</span></span><span><i style="background:var(--seg6)"></i>밸류 <span class="num">8/10</span></span><span>감점 <span class="num">-3</span></span></div></div>
-  <div class="block"><h4>정량 근거</h4>최근 연매출 성장률 +32% · 최근 분기 매출 YoY +32% · 영업이익률 36.1% · 공모가 대비 -37%, 고점 대비 -75% · PER 13.2배</div>
-  <div class="block"><h4>성장 포인트</h4><ul><li>2025년 매출 238억원(+32%), 2020년 이후 영업이익률 30%대 유지, PER 13배</li><li>2026년 상반기 매출 139억원(+26.5%), 회사 목표 연매출 356억원</li><li>수요예측 1,097:1, 참여 기관 100%가 밴드 상단 이상, 확약 30.6%</li><li>공모자금으로 생산능력 2배 확대·해외 임상 진행</li></ul></div><div class="block"><h4>리스크</h4><ul><li>공모가 7,800원 대비 약 37% 아래, 상장일 고점 대비 -75%</li><li>피부 이식재 &#x27;제노패치&#x27; 특허 소송 진행 중</li><li>일간 변동성 10%</li></ul></div><div class="block"><h4>일정·촉매</h4><ul><li>보호예수 1개월 해제는 지났고 3개월 해제 2027-01-22</li><li>양막렌즈·스킨부스터 신제품 확대</li></ul></div>
-  <div class="flags"><span class="flag warn">일간 변동성 10% (매우 큼)</span></div>
-  <div class="src">출처 <a href="https://newstomato.com/ReadNews.aspx?no=1312993" target="_blank" rel="noopener">newstomato.com</a> · <a href="https://alphasquare.co.kr/home/insight/posts/2bf62edb-5189-4efc-b941-30d98fd3e226" target="_blank" rel="noopener">alphasquare.co.kr</a> · <a href="https://kormedi.com/2876904/" target="_blank" rel="noopener">kormedi.com</a> · <a href="https://newstomato.com/ReadNews.aspx?no=1316118" target="_blank" rel="noopener">newstomato.com</a> · <a href="https://alphasquare.co.kr/home/insight/posts/ab670c9e-7913-4d12-9c7c-a9f665a6843e" target="_blank" rel="noopener">alphasquare.co.kr</a></div>
-</article>
-<article class="card">
-  <div class="card-top">
-    <div class="who">
-      <h3><a href="https://m.stock.naver.com/domestic/stock/345290" target="_blank" rel="noopener">영광와이케이엠씨</a></h3>
-      <div class="code num">345290 · KOSDAQ</div>
-      <div class="biz">반도체·디스플레이 장비 부품 가공·표면처리(아노다이징), 항공·방산 부품</div>
-    </div>
-    <div class="score"><span class="chip 관찰">관찰</span><div class="t num">60</div><div class="u">/ 100점</div></div>
-  </div>
-  <dl class="facts"><div><dt>상장일</dt><dd>2026-11-16</dd></div><div><dt>종가</dt><dd><span class="num">6,050</span>원</dd></div><div><dt>시가총액</dt><dd>876억원</dd></div><div><dt>공모가</dt><dd><span class="num">11,000</span>원 · <span class="num down">-45%</span></dd></div><div><dt>상장후 고점 대비</dt><dd><span class="num down">-63%</span></dd></div><div><dt>5일 평균 거래대금</dt><dd>56억원</dd></div><div><dt>수요예측 경쟁률</dt><dd><span class="num">1,163</span> : 1</dd></div><div><dt>의무보유확약</dt><dd><span class="num">7.2</span>%</dd></div></dl>
-  <div><div class="bar" role="img" aria-label="점수 구성"><span style="width:23.0%;background:var(--seg1)" title="성장성 23/30"></span><span style="width:12.0%;background:var(--seg2)" title="수익성 12/15"></span><span style="width:4.0%;background:var(--seg3)" title="상장후 흐름 4/20"></span><span style="width:14.0%;background:var(--seg4)" title="수급 14/15"></span><span style="width:5.0%;background:var(--seg5)" title="공모 품질 5/10"></span><span style="width:5.0%;background:var(--seg6)" title="밸류 5/10"></span></div><div class="legend"><span><i style="background:var(--seg1)"></i>성장성 <span class="num">23/30</span></span><span><i style="background:var(--seg2)"></i>수익성 <span class="num">12/15</span></span><span><i style="background:var(--seg3)"></i>상장후 흐름 <span class="num">4/20</span></span><span><i style="background:var(--seg4)"></i>수급 <span class="num">14/15</span></span><span><i style="background:var(--seg5)"></i>공모 품질 <span class="num">5/10</span></span><span><i style="background:var(--seg6)"></i>밸류 <span class="num">5/10</span></span><span>감점 <span class="num">-3</span></span></div></div>
-  <div class="block"><h4>정량 근거</h4>최근 연매출 성장률 +39% · 최근 분기 매출 YoY +95% · 영업이익 흑자전환 · 영업이익률 8.7% · 공모가 대비 -45%, 고점 대비 -63% · 최근 기관·외국인 동반 순매수 · PER 27.8배</div>
-  <div class="block"><h4>성장 포인트</h4><ul><li>최근 연매출 +39%, 최근 분기 매출 YoY +95%, 영업이익 흑자전환</li><li>수요예측 1,163:1, 공모가 밴드 상단 확정</li><li>최근 기관·외국인 동반 순매수</li></ul></div><div class="block"><h4>리스크</h4><ul><li>확약 7.2%(1개월 이상은 1.8%)로 낮음</li><li>유통가능 비율이 1개월 뒤 47%, 3개월 뒤 53%로 커짐 → 2026-12-16 1개월 보호예수 해제 물량 부담</li><li>공모가 11,000원 대비 약 45% 아래</li></ul></div><div class="block"><h4>일정·촉매</h4><ul><li>1개월 보호예수 해제 2026-12-16</li></ul></div>
-  <div class="flags"><span class="flag warn">보호예수 1개월 해제 2026-12-16 (D-19)</span></div>
-  <div class="src">출처 <a href="https://newstomato.com/ReadNews.aspx?no=1319338" target="_blank" rel="noopener">newstomato.com</a> · <a href="https://alphasquare.co.kr/home/insight/posts/77f165b6-9552-40b6-8d0f-34d24a4c9655" target="_blank" rel="noopener">alphasquare.co.kr</a></div>
-</article>
-<article class="card">
-  <div class="card-top">
-    <div class="who">
-      <h3><a href="https://m.stock.naver.com/domestic/stock/420610" target="_blank" rel="noopener">인텔리빅스</a></h3>
-      <div class="code num">420610 · KOSDAQ</div>
-      <div class="biz">AI 영상분석 솔루션 (대표주관 미래에셋증권)</div>
-    </div>
-    <div class="score"><span class="chip 관찰">관찰</span><div class="t num">60</div><div class="u">/ 100점</div></div>
-  </div>
-  <dl class="facts"><div><dt>상장일</dt><dd>2026-10-30</dd></div><div><dt>종가</dt><dd><span class="num">7,160</span>원</dd></div><div><dt>시가총액</dt><dd>812억원</dd></div><div><dt>공모가</dt><dd><span class="num">9,000</span>원 · <span class="num down">-20%</span></dd></div><div><dt>상장후 고점 대비</dt><dd><span class="num down">-80%</span></dd></div><div><dt>5일 평균 거래대금</dt><dd>29억원</dd></div><div><dt>수요예측 경쟁률</dt><dd><span class="num">1,234</span> : 1</dd></div></dl>
-  <div><div class="bar" role="img" aria-label="점수 구성"><span style="width:21.0%;background:var(--seg1)" title="성장성 21/30"></span><span style="width:13.0%;background:var(--seg2)" title="수익성 13/15"></span><span style="width:12.0%;background:var(--seg3)" title="상장후 흐름 12/20"></span><span style="width:7.0%;background:var(--seg4)" title="수급 7/15"></span><span style="width:5.0%;background:var(--seg5)" title="공모 품질 5/10"></span><span style="width:8.0%;background:var(--seg6)" title="밸류 8/10"></span></div><div class="legend"><span><i style="background:var(--seg1)"></i>성장성 <span class="num">21/30</span></span><span><i style="background:var(--seg2)"></i>수익성 <span class="num">13/15</span></span><span><i style="background:var(--seg3)"></i>상장후 흐름 <span class="num">12/20</span></span><span><i style="background:var(--seg4)"></i>수급 <span class="num">7/15</span></span><span><i style="background:var(--seg5)"></i>공모 품질 <span class="num">5/10</span></span><span><i style="background:var(--seg6)"></i>밸류 <span class="num">8/10</span></span><span>감점 <span class="num">-6</span></span></div></div>
-  <div class="block"><h4>정량 근거</h4>최근 연매출 성장률 +37% · 최근 분기 매출 YoY -10% · 영업이익률 10.5% · 공모가 대비 -20%, 고점 대비 -80% · PER 10.7배</div>
-  <div class="block"><h4>성장 포인트</h4><ul><li>최근 연매출 +37%, 영업이익률 약 10%로 흑자 AI 기업, PER 10.7배</li><li>수요예측 1,234:1, 공모가 밴드 상단 9,000원 확정</li></ul></div><div class="block"><h4>리스크</h4><ul><li>1개월 보호예수 해제가 2026-11-30(D-3)로 임박</li><li>최근 분기 매출 YoY -10%</li><li>공모가 대비 약 20% 아래, 확약 비율 미확인</li></ul></div><div class="block"><h4>일정·촉매</h4><ul><li>1개월 보호예수 해제 2026-11-30 이후 매물 소화 여부</li></ul></div>
-  <div class="flags"><span class="flag warn">보호예수 1개월 해제 2026-11-30 (D-3)</span><span class="flag warn">일간 변동성 11% (매우 큼)</span></div>
-  <div class="src">출처 <a href="https://byline.network/2026/10/23-636/" target="_blank" rel="noopener">byline.network</a> · <a href="https://alphasquare.co.kr/home/insight/posts/fa04dc94-be43-4b99-a314-5339d052bd7c" target="_blank" rel="noopener">alphasquare.co.kr</a></div>
-</article>
-<article class="card">
-  <div class="card-top">
-    <div class="who">
-      <h3><a href="https://m.stock.naver.com/domestic/stock/0015M0" target="_blank" rel="noopener">디티에스</a></h3>
-      <div class="code num">0015M0 · KOSDAQ</div>
-      <div class="biz">발전·석유화학 플랜트용 공랭식 열교환기(AFC·ACC), 다산네트웍스 자회사</div>
-    </div>
-    <div class="score"><span class="chip 관찰">관찰</span><div class="t num">59</div><div class="u">/ 100점</div></div>
-  </div>
-  <dl class="facts"><div><dt>상장일</dt><dd>2026-10-23</dd></div><div><dt>종가</dt><dd><span class="num">8,150</span>원</dd></div><div><dt>시가총액</dt><dd>1,213억원</dd></div><div><dt>공모가</dt><dd><span class="num">18,500</span>원 · <span class="num down">-56%</span></dd></div><div><dt>상장후 고점 대비</dt><dd><span class="num down">-80%</span></dd></div><div><dt>5일 평균 거래대금</dt><dd>11억원</dd></div><div><dt>수요예측 경쟁률</dt><dd><span class="num">984</span> : 1</dd></div><div><dt>의무보유확약</dt><dd><span class="num">13.3</span>%</dd></div></dl>
-  <div><div class="bar" role="img" aria-label="점수 구성"><span style="width:16.0%;background:var(--seg1)" title="성장성 16/30"></span><span style="width:13.0%;background:var(--seg2)" title="수익성 13/15"></span><span style="width:10.0%;background:var(--seg3)" title="상장후 흐름 10/20"></span><span style="width:7.0%;background:var(--seg4)" title="수급 7/15"></span><span style="width:6.0%;background:var(--seg5)" title="공모 품질 6/10"></span><span style="width:10.0%;background:var(--seg6)" title="밸류 10/10"></span></div><div class="legend"><span><i style="background:var(--seg1)"></i>성장성 <span class="num">16/30</span></span><span><i style="background:var(--seg2)"></i>수익성 <span class="num">13/15</span></span><span><i style="background:var(--seg3)"></i>상장후 흐름 <span class="num">10/20</span></span><span><i style="background:var(--seg4)"></i>수급 <span class="num">7/15</span></span><span><i style="background:var(--seg5)"></i>공모 품질 <span class="num">6/10</span></span><span><i style="background:var(--seg6)"></i>밸류 <span class="num">10/10</span></span><span>감점 <span class="num">-3</span></span></div></div>
-  <div class="block"><h4>정량 근거</h4>최근 연매출 성장률 +28% · 최근 분기 매출 YoY -15% · 영업이익률 17.6% · 공모가 대비 -56%, 고점 대비 -80% · PER 5.2배</div>
-  <div class="block"><h4>성장 포인트</h4><ul><li>매출 2023년 758억 → 2025년 1,427억원, 영업이익 251억원, PER 5배대</li><li>수요예측 984:1, 공모가 밴드 상단 18,500원</li></ul></div><div class="block"><h4>리스크</h4><ul><li>수출 비중 97%, UAE 매출 비중 45%로 특정 국가 편중</li><li>모회사 중복상장 이슈, 차입금의 82%가 1년 내 만기</li><li>최근 분기 매출 YoY -15%, 공모가 대비 약 56% 아래</li></ul></div><div class="block"><h4>일정·촉매</h4><ul><li>1개월 보호예수 해제는 지났고 3개월 해제 2027-01-23</li></ul></div>
-  <div class="flags"><span class="flag warn">일간 변동성 11% (매우 큼)</span></div>
-  <div class="src">출처 <a href="https://newstomato.com/ReadNews.aspx?no=1314465" target="_blank" rel="noopener">newstomato.com</a> · <a href="https://alphasquare.co.kr/home/insight/posts/4d9d7d2e-3229-46a2-9390-0dcc869570f4" target="_blank" rel="noopener">alphasquare.co.kr</a> · <a href="https://alphasquare.co.kr/home/insight/posts/b090bcd8-1d88-4c03-a09c-741965e47905" target="_blank" rel="noopener">alphasquare.co.kr</a> · <a href="https://dealsite.co.kr/articles/170497" target="_blank" rel="noopener">dealsite.co.kr</a></div>
-</article>
-<article class="card">
-  <div class="card-top">
-    <div class="who">
-      <h3><a href="https://m.stock.naver.com/domestic/stock/271160" target="_blank" rel="noopener">하나에어로</a></h3>
-      <div class="code num">271160 · KOSDAQ</div>
-      <div class="biz">항공기 구조물·치공구, 헬기 동체 조립 (Bell 412 동체 공급)</div>
-    </div>
-    <div class="score"><span class="chip 관찰">관찰</span><div class="t num">55</div><div class="u">/ 100점</div></div>
-  </div>
-  <dl class="facts"><div><dt>상장일</dt><dd>2026-11-20</dd></div><div><dt>종가</dt><dd><span class="num">5,750</span>원</dd></div><div><dt>시가총액</dt><dd>1,019억원</dd></div><div><dt>공모가</dt><dd><span class="num">5,700</span>원 · <span class="num up">+1%</span></dd></div><div><dt>상장후 고점 대비</dt><dd><span class="num down">-49%</span></dd></div><div><dt>5일 평균 거래대금</dt><dd>292억원</dd></div><div><dt>수요예측 경쟁률</dt><dd><span class="num">1,051</span> : 1</dd></div><div><dt>의무보유확약</dt><dd><span class="num">4.2</span>%</dd></div></dl>
-  <div><div class="bar" role="img" aria-label="점수 구성"><span style="width:10.0%;background:var(--seg1)" title="성장성 10/30"></span><span style="width:13.0%;background:var(--seg2)" title="수익성 13/15"></span><span style="width:18.0%;background:var(--seg3)" title="상장후 흐름 18/20"></span><span style="width:10.0%;background:var(--seg4)" title="수급 10/15"></span><span style="width:5.0%;background:var(--seg5)" title="공모 품질 5/10"></span><span style="width:4.0%;background:var(--seg6)" title="밸류 4/10"></span></div><div class="legend"><span><i style="background:var(--seg1)"></i>성장성 <span class="num">10/30</span></span><span><i style="background:var(--seg2)"></i>수익성 <span class="num">13/15</span></span><span><i style="background:var(--seg3)"></i>상장후 흐름 <span class="num">18/20</span></span><span><i style="background:var(--seg4)"></i>수급 <span class="num">10/15</span></span><span><i style="background:var(--seg5)"></i>공모 품질 <span class="num">5/10</span></span><span><i style="background:var(--seg6)"></i>밸류 <span class="num">4/10</span></span><span>감점 <span class="num">-5</span></span></div></div>
-  <div class="block"><h4>정량 근거</h4>최근 연매출 성장률 +3% · 영업이익률 15.0% · 공모가 대비 +1%, 고점 대비 -49% · PSR 3.1배</div>
-  <div class="block"><h4>성장 포인트</h4><ul><li>Bell 과 2027~2031년 헬기 동체 최대 120대 장기 공급 계약</li><li>2026년 상반기 매출이 2025년 연매출(332억원)의 62% 수준</li><li>공모가 5,700원 근처(+1%)에서 거래 중인 유일한 상위 후보</li></ul></div><div class="block"><h4>리스크</h4><ul><li>확약 4.2%(대부분 15일), 일간 변동성 19%</li><li>부채비율 305%, 차입금 의존도가 업종 평균보다 높음</li></ul></div><div class="block"><h4>일정·촉매</h4><ul><li>1개월 보호예수 해제 2026-12-20</li></ul></div>
-  <div class="flags"><span class="flag warn">일간 변동성 19% (매우 큼)</span><span class="flag">부채비율 305%</span></div>
-  <div class="src">출처 <a href="https://newstomato.com/ReadNews.aspx?no=1314707" target="_blank" rel="noopener">newstomato.com</a> · <a href="https://www.newstomato.com/ReadNews.aspx?no=1319906" target="_blank" rel="noopener">newstomato.com</a> · <a href="https://alphasquare.co.kr/home/insight/posts/6acaf2b4-a14c-46a7-80e1-cfc2e5c3ba9d" target="_blank" rel="noopener">alphasquare.co.kr</a></div>
-</article>
-<article class="card">
-  <div class="card-top">
-    <div class="who">
-      <h3><a href="https://m.stock.naver.com/domestic/stock/439270" target="_blank" rel="noopener">크리에이츠</a></h3>
-      <div class="code num">439270 · KOSDAQ</div>
-      <div class="biz">골프 론치모니터(해외 UNEEKOR, 국내 QED), 수출 비중 약 80%</div>
-    </div>
-    <div class="score"><span class="chip 관찰">관찰</span><div class="t num">55</div><div class="u">/ 100점</div></div>
-  </div>
-  <dl class="facts"><div><dt>상장일</dt><dd>2026-10-30</dd></div><div><dt>종가</dt><dd><span class="num">4,615</span>원</dd></div><div><dt>시가총액</dt><dd>606억원</dd></div><div><dt>공모가</dt><dd><span class="num">15,000</span>원 · <span class="num down">-69%</span></dd></div><div><dt>상장후 고점 대비</dt><dd><span class="num down">-64%</span></dd></div><div><dt>5일 평균 거래대금</dt><dd>3억원</dd></div><div><dt>수요예측 경쟁률</dt><dd><span class="num">240</span> : 1</dd></div><div><dt>의무보유확약</dt><dd><span class="num">0.5</span>%</dd></div></dl>
-  <div><div class="bar" role="img" aria-label="점수 구성"><span style="width:14.0%;background:var(--seg1)" title="성장성 14/30"></span><span style="width:15.0%;background:var(--seg2)" title="수익성 15/15"></span><span style="width:10.0%;background:var(--seg3)" title="상장후 흐름 10/20"></span><span style="width:9.0%;background:var(--seg4)" title="수급 9/15"></span><span style="width:2.0%;background:var(--seg5)" title="공모 품질 2/10"></span><span style="width:8.0%;background:var(--seg6)" title="밸류 8/10"></span></div><div class="legend"><span><i style="background:var(--seg1)"></i>성장성 <span class="num">14/30</span></span><span><i style="background:var(--seg2)"></i>수익성 <span class="num">15/15</span></span><span><i style="background:var(--seg3)"></i>상장후 흐름 <span class="num">10/20</span></span><span><i style="background:var(--seg4)"></i>수급 <span class="num">9/15</span></span><span><i style="background:var(--seg5)"></i>공모 품질 <span class="num">2/10</span></span><span><i style="background:var(--seg6)"></i>밸류 <span class="num">8/10</span></span><span>감점 <span class="num">-3</span></span></div></div>
-  <div class="block"><h4>정량 근거</h4>최근 연매출 성장률 +26% · 영업이익률 24.1% · 공모가 대비 -69%, 고점 대비 -64% · 최근 기관·외국인 동반 순매수 · PSR 0.6배</div>
-  <div class="block"><h4>성장 포인트</h4><ul><li>2025년 매출 1,042억원, 영업이익률 24%, PSR 0.6배로 후보 중 가장 저평가</li><li>LLM 기반 골프 AI 코칭 &#x27;AIMY&#x27; 4분기 출시 목표</li></ul></div><div class="block"><h4>리스크</h4><ul><li>수요예측 240:1, 공모가 밴드 하단 확정, 확약 기관 1곳(0.5%)</li><li>5일 평균 거래대금 3억원 미만으로 유동성 부족</li><li>1개월 보호예수 해제 2026-11-30(D-3)</li></ul></div><div class="block"><h4>일정·촉매</h4><ul><li>AIMY 출시</li><li>보호예수 해제 이후 거래 회복 여부</li></ul></div>
-  <div class="flags"><span class="flag">거래대금 3억 미만(유동성 부족)</span><span class="flag warn">보호예수 1개월 해제 2026-11-30 (D-3)</span></div>
-  <div class="src">출처 <a href="https://newstomato.com/ReadNews.aspx?no=1312861" target="_blank" rel="noopener">newstomato.com</a> · <a href="https://alphasquare.co.kr/home/insight/posts/4d74ba25-e481-4eaa-8259-cd229cf1dec8" target="_blank" rel="noopener">alphasquare.co.kr</a></div>
-</article>
-<article class="card">
-  <div class="card-top">
-    <div class="who">
-      <h3><a href="https://m.stock.naver.com/domestic/stock/0161M0" target="_blank" rel="noopener">네오사피엔스</a></h3>
-      <div class="code num">0161M0 · KOSDAQ</div>
-      <div class="biz">음성 합성 AI</div>
-    </div>
-    <div class="score"><span class="chip 관찰">관찰</span><div class="t num">55</div><div class="u">/ 100점</div></div>
-  </div>
-  <dl class="facts"><div><dt>상장일</dt><dd>2026-09-21</dd></div><div><dt>종가</dt><dd><span class="num">4,785</span>원</dd></div><div><dt>시가총액</dt><dd>590억원</dd></div><div><dt>공모가</dt><dd><span class="num">10,000</span>원 · <span class="num down">-52%</span></dd></div><div><dt>상장후 고점 대비</dt><dd><span class="num down">-88%</span></dd></div><div><dt>5일 평균 거래대금</dt><dd>4억원</dd></div><div><dt>수요예측 경쟁률</dt><dd><span class="num">220</span> : 1</dd></div><div><dt>의무보유확약</dt><dd><span class="num">9.0</span>%</dd></div></dl>
-  <div><div class="bar" role="img" aria-label="점수 구성"><span style="width:25.0%;background:var(--seg1)" title="성장성 25/30"></span><span style="width:4.0%;background:var(--seg2)" title="수익성 4/15"></span><span style="width:10.0%;background:var(--seg3)" title="상장후 흐름 10/20"></span><span style="width:10.0%;background:var(--seg4)" title="수급 10/15"></span><span style="width:2.0%;background:var(--seg5)" title="공모 품질 2/10"></span><span style="width:4.0%;background:var(--seg6)" title="밸류 4/10"></span></div><div class="legend"><span><i style="background:var(--seg1)"></i>성장성 <span class="num">25/30</span></span><span><i style="background:var(--seg2)"></i>수익성 <span class="num">4/15</span></span><span><i style="background:var(--seg3)"></i>상장후 흐름 <span class="num">10/20</span></span><span><i style="background:var(--seg4)"></i>수급 <span class="num">10/15</span></span><span><i style="background:var(--seg5)"></i>공모 품질 <span class="num">2/10</span></span><span><i style="background:var(--seg6)"></i>밸류 <span class="num">4/10</span></span></div></div>
-  <div class="block"><h4>정량 근거</h4>최근 연매출 성장률 +66% · 최근 분기 매출 YoY +4% · 영업적자(-27억) · 적자 축소 · 공모가 대비 -52%, 고점 대비 -88% · 최근 기관·외국인 동반 순매수 · PSR 5.6배</div>
-  <div class="block"><h4>성장 포인트</h4><ul><li>최근 연매출 +66%, 영업적자 축소 중</li><li>최근 기관·외국인 동반 순매수</li></ul></div><div class="block"><h4>리스크</h4><ul><li>공모가를 밴드 하단(13,800원) 아래 10,000원으로 확정, 수요예측 220:1</li><li>1개월 이상 확약 0건</li><li>영업적자, 상장 전 자본잠식(공모로 해소됐는지 확인 필요), 공모가 대비 약 52% 아래</li></ul></div><div class="block"><h4>일정·촉매</h4><ul><li>3개월 보호예수 해제 2026-12-21</li></ul></div>
-  <div class="flags"><span class="flag warn">상장 전 결산 자본잠식(공모로 해소됐는지 확인)</span></div>
-  <div class="src">출처 <a href="https://alphasquare.co.kr/home/insight/posts/fe658362-3928-447f-b4ba-0e31f3f05183" target="_blank" rel="noopener">alphasquare.co.kr</a></div>
-</article></div></section>
-<section style="display:flex;flex-direction:column;gap:12px"><h2>전체 후보</h2>
-<div class="tbl"><table>
-<thead><tr><th>순위</th><th>변동</th><th>종목</th><th>상장일</th><th class="r">종가</th><th class="r">공모가 대비</th><th class="r">고점 대비</th><th class="r">점수</th><th>등급</th></tr></thead>
-<tbody><tr><td class="num">1</td><td class="num"></td><td><a href="https://m.stock.naver.com/domestic/stock/179880" target="_blank" rel="noopener">멜콘</a> <span class="muted num">179880</span></td><td class="num">2026-10-15</td><td class="r num">9,050</td><td class="r"><span class="num down">-26%</span></td><td class="r"><span class="num down">-69%</span></td><td class="r num">72</td><td><span class="chip 관심">관심</span></td></tr><tr><td class="num">2</td><td class="num"></td><td><a href="https://m.stock.naver.com/domestic/stock/0013Y0" target="_blank" rel="noopener">엠에스바이오</a> <span class="muted num">0013Y0</span></td><td class="num">2026-10-22</td><td class="r num">4,880</td><td class="r"><span class="num down">-37%</span></td><td class="r"><span class="num down">-75%</span></td><td class="r num">71</td><td><span class="chip 관심">관심</span></td></tr><tr><td class="num">3</td><td class="num"></td><td><a href="https://m.stock.naver.com/domestic/stock/345290" target="_blank" rel="noopener">영광와이케이엠씨</a> <span class="muted num">345290</span></td><td class="num">2026-11-16</td><td class="r num">6,050</td><td class="r"><span class="num down">-45%</span></td><td class="r"><span class="num down">-63%</span></td><td class="r num">60</td><td><span class="chip 관찰">관찰</span></td></tr><tr><td class="num">4</td><td class="num"></td><td><a href="https://m.stock.naver.com/domestic/stock/420610" target="_blank" rel="noopener">인텔리빅스</a> <span class="muted num">420610</span></td><td class="num">2026-10-30</td><td class="r num">7,160</td><td class="r"><span class="num down">-20%</span></td><td class="r"><span class="num down">-80%</span></td><td class="r num">60</td><td><span class="chip 관찰">관찰</span></td></tr><tr><td class="num">5</td><td class="num"></td><td><a href="https://m.stock.naver.com/domestic/stock/0015M0" target="_blank" rel="noopener">디티에스</a> <span class="muted num">0015M0</span></td><td class="num">2026-10-23</td><td class="r num">8,150</td><td class="r"><span class="num down">-56%</span></td><td class="r"><span class="num down">-80%</span></td><td class="r num">59</td><td><span class="chip 관찰">관찰</span></td></tr><tr><td class="num">6</td><td class="num"></td><td><a href="https://m.stock.naver.com/domestic/stock/271160" target="_blank" rel="noopener">하나에어로</a> <span class="muted num">271160</span></td><td class="num">2026-11-20</td><td class="r num">5,750</td><td class="r"><span class="num up">+1%</span></td><td class="r"><span class="num down">-49%</span></td><td class="r num">55</td><td><span class="chip 관찰">관찰</span></td></tr><tr><td class="num">7</td><td class="num"></td><td><a href="https://m.stock.naver.com/domestic/stock/439270" target="_blank" rel="noopener">크리에이츠</a> <span class="muted num">439270</span></td><td class="num">2026-10-30</td><td class="r num">4,615</td><td class="r"><span class="num down">-69%</span></td><td class="r"><span class="num down">-64%</span></td><td class="r num">55</td><td><span class="chip 관찰">관찰</span></td></tr><tr><td class="num">8</td><td class="num"></td><td><a href="https://m.stock.naver.com/domestic/stock/0161M0" target="_blank" rel="noopener">네오사피엔스</a> <span class="muted num">0161M0</span></td><td class="num">2026-09-21</td><td class="r num">4,785</td><td class="r"><span class="num down">-52%</span></td><td class="r"><span class="num down">-88%</span></td><td class="r num">55</td><td><span class="chip 관찰">관찰</span></td></tr><tr><td class="num">9</td><td class="num"></td><td><a href="https://m.stock.naver.com/domestic/stock/0153R0" target="_blank" rel="noopener">바로팜</a> <span class="muted num">0153R0</span></td><td class="num">2026-11-11</td><td class="r num">5,690</td><td class="r"><span class="num down">-65%</span></td><td class="r"><span class="num down">-67%</span></td><td class="r num">47</td><td><span class="chip 보류">보류</span></td></tr><tr><td class="num">10</td><td class="num"></td><td><a href="https://m.stock.naver.com/domestic/stock/266690" target="_blank" rel="noopener">덕산넵코어스</a> <span class="muted num">266690</span></td><td class="num">2026-09-30</td><td class="r num">5,130</td><td class="r"><span class="num down">-65%</span></td><td class="r"><span class="num down">-82%</span></td><td class="r num">46</td><td><span class="chip 보류">보류</span></td></tr><tr><td class="num">11</td><td class="num"></td><td><a href="https://m.stock.naver.com/domestic/stock/498150" target="_blank" rel="noopener">엠비디</a> <span class="muted num">498150</span></td><td class="num">2026-11-24</td><td class="r num">3,955</td><td class="r"><span class="num down">-44%</span></td><td class="r"><span class="num down">-41%</span></td><td class="r num">44</td><td><span class="chip 보류">보류</span></td></tr><tr><td class="num">12</td><td class="num"></td><td><a href="https://m.stock.naver.com/domestic/stock/495910" target="_blank" rel="noopener">이에스티</a> <span class="muted num">495910</span></td><td class="num">2026-11-04</td><td class="r num">3,480</td><td class="r"><span class="num down">-72%</span></td><td class="r"><span class="num down">-83%</span></td><td class="r num">44</td><td><span class="chip 보류">보류</span></td></tr><tr><td class="num">13</td><td class="num"></td><td><a href="https://m.stock.naver.com/domestic/stock/359410" target="_blank" rel="noopener">영광</a> <span class="muted num">359410</span></td><td class="num">2026-11-02</td><td class="r num">6,090</td><td class="r"><span class="num down">-70%</span> <span class="muted">(상장일 종가)</span></td><td class="r"><span class="num down">-84%</span></td><td class="r num">38</td><td><span class="chip 보류">보류</span></td></tr><tr><td class="num">14</td><td class="num"></td><td><a href="https://m.stock.naver.com/domestic/stock/486510" target="_blank" rel="noopener">글로벌테크놀로지</a> <span class="muted num">486510</span></td><td class="num">2026-09-29</td><td class="r num">4,490</td><td class="r"><span class="num down">-55%</span></td><td class="r"><span class="num down">-85%</span></td><td class="r num">36</td><td><span class="chip 보류">보류</span></td></tr><tr><td class="num">15</td><td class="num"></td><td><a href="https://m.stock.naver.com/domestic/stock/386380" target="_blank" rel="noopener">스카이랩스</a> <span class="muted num">386380</span></td><td class="num">2026-09-04</td><td class="r num">7,190</td><td class="r"><span class="num down">-69%</span> <span class="muted">(상장일 종가)</span></td><td class="r"><span class="num down">-82%</span></td><td class="r num">35</td><td><span class="chip 보류">보류</span></td></tr><tr><td class="num">16</td><td class="num"></td><td><a href="https://m.stock.naver.com/domestic/stock/493260" target="_blank" rel="noopener">옵토닉스</a> <span class="muted num">493260</span></td><td class="num">2026-11-17</td><td class="r num">8,280</td><td class="r"><span class="num down">-53%</span> <span class="muted">(상장일 종가)</span></td><td class="r"><span class="num down">-76%</span></td><td class="r num">35</td><td><span class="chip 보류">보류</span></td></tr><tr><td class="num">17</td><td class="num"></td><td><a href="https://m.stock.naver.com/domestic/stock/0010S0" target="_blank" rel="noopener">와이즈플래닛컴퍼니</a> <span class="muted num">0010S0</span></td><td class="num">2026-09-23</td><td class="r num">5,210</td><td class="r"><span class="num down">-89%</span> <span class="muted">(상장일 종가)</span></td><td class="r"><span class="num down">-89%</span></td><td class="r num">35</td><td><span class="chip 보류">보류</span></td></tr><tr><td class="num">18</td><td class="num"></td><td><a href="https://m.stock.naver.com/domestic/stock/493410" target="_blank" rel="noopener">넥스아이</a> <span class="muted num">493410</span></td><td class="num">2026-11-12</td><td class="r num">3,970</td><td class="r"><span class="num down">-17%</span> <span class="muted">(상장일 종가)</span></td><td class="r"><span class="num down">-50%</span></td><td class="r num">18</td><td><span class="chip 보류">보류</span></td></tr></tbody></table></div>
-<div class="muted">가격 기준 초과: 에이엘로봇 <span class="num">10,120</span>원, 동원파츠 <span class="num">16,320</span>원, 래블업 <span class="num">12,630</span>원, 티앤이코리아 <span class="num">11,810</span>원, 엘리스 <span class="num">46,250</span>원, 브릴스 <span class="num">10,590</span>원, 빅웨이브로보틱스 <span class="num">20,700</span>원</div>
-<div class="muted">제외: 아이엠스팩1호(스팩), 한화플러스제6호스팩(스팩), 에스케이증권제14호기업인수목적(스팩), 한국제17호스팩(스팩), KB제34호스팩(스팩), 엔에이치스팩34호(스팩)</div>
+  <p class="note">2024년 1월~2026년 9월에 상장한 1만원 이하 종목 1,015건에 이 보고서와 같은 손절·목표가 규칙을 적용한 결과입니다. 목표가 도달 33%, 손절 45%, 한 달 경과 21%. 이 그룹은 한 달 안에 이익을 기대할 근거가 약해서, 아래 주수는 <b>손절 시 잃는 금액을 총자금의 1% 이내</b>로 묶는 기준으로 정했습니다. 상장폐지 종목은 빠져 있어 실제 결과는 이보다 나빴을 수 있습니다.</p>
 </section>
-<section><h2>전일 대비</h2><p class="summary">첫 보고서라 전일 비교가 없습니다. 다음 보고서부터 순위 변동과 신규 편입 종목을 표시합니다.</p></section>
+<section aria-labelledby="h-budget">
+  <h2 id="h-budget">내 투자금으로 계산하기</h2>
+  <div class="budget">
+    <div class="budget-row">
+      <label for="budget">총 투자금</label>
+      <input id="budget" inputmode="numeric" autocomplete="off" value="1,000" aria-describedby="budget-unit"><span id="budget-unit">만원</span>
+      <div class="quick"><button type="button" data-v="3000000">300만원</button><button type="button" data-v="5000000">500만원</button><button type="button" data-v="10000000">1,000만원</button><button type="button" data-v="30000000">3,000만원</button></div>
+    </div>
+    <dl class="totals">
+      <div><dt>10종목 매수 합계</dt><dd class="num" id="t-amt">381만원</dd></div>
+      <div><dt>현금으로 남는 돈</dt><dd class="num" id="t-cash">619만원</dd></div>
+      <div><dt>모두 목표가 도달 시</dt><dd class="num up" id="t-gain">+77만원</dd></div>
+      <div><dt>모두 손절 시</dt><dd class="num down" id="t-loss">−75만원</dd></div>
+    </dl>
+    <div class="muted">종목당 손절 손실이 총투자금의 1%(관심)·0.75%(관찰)·0.5%(보류)를 넘지 않게, 한 종목 비중은 15%·10%·5% 이하로 맞췄습니다. 거래가 적은 종목은 하루 거래대금의 2%까지만 담습니다.</div>
+  </div>
+</section>
+<section aria-labelledby="h-picks">
+  <h2 id="h-picks">오늘의 10종목</h2>
+  <ol class="picks">
+<li class="pick" data-code="179880">
+  <div class="pick-head">
+    <span class="rank">1</span>
+    <h3><a href="https://m.stock.naver.com/domestic/stock/179880" target="_blank" rel="noopener">멜콘</a></h3>
+    <span class="chip 관심">관심</span>
+    <span class="code num">179880</span>
+    <span class="score">점수 <b>72</b>/100</span>
+  </div>
+  <div class="biz">반도체 노광장비용 전원·제어 장비 (대표주관 대신증권)</div>
+  <p class="why">매출 +67%에 영업이익률 15%, 기관 확약 36%로 후보 중 기초가 가장 탄탄합니다.</p>
+  <dl class="ticket">
+    <div class="buy"><dt>사는 주수</dt><dd><span class="q-shares num">55주</span> <small class="q-amount">50만원</small></dd></div>
+    <div><dt>현재가</dt><dd class="num">9,020</dd><small>공모가 12,300원 대비 <span class="num down">-27%</span></small></div>
+    <div><dt>손절가</dt><dd class="num down">7,210</dd><small>-20% · 손실 <span class="q-loss num">−10만원</span></small></div>
+    <div><dt>1개월 목표가</dt><dd class="num up">10,670</dd><small>+18% · 이익 <span class="q-gain num">+9만원</span></small></div>
+    <div><dt>목표가 근거</dt><dd style="font-size:.95rem">20일 평균가</dd><small>손익비 0.9</small></div>
+  </dl>
+  <div class="pros"><div><h4>좋은 점</h4><ul><li>최근 연매출 +67%, 최근 분기 매출 YoY +60%, 영업이익률 약 15%로 이익을 내며 성장 중</li><li>수요예측 1,137:1, 신청 수량 기준 확약 36%로 기관 수요가 이번 후보 중 가장 탄탄함</li><li>최대주주 지분 대부분이 30개월 보호예수, 상장 직후 유통물량 약 34.5%</li></ul></div><div><h4>주의할 점</h4><ul><li>공모가 12,300원 대비 약 27% 아래, 상장일 고점(27,400원) 대비 -70%</li><li>일간 변동성 12%로 매우 큼</li><li>상장일 코스닥 급락(사이드카)과 15일 확약 물량 해제(10/30) 이후 하락 추세가 이어짐</li></ul></div><div><h4>일정</h4><ul><li>보호예수 3개월 해제 2027-01-15 전후</li><li>4분기 실적 발표(2027년 2~3월)</li></ul></div></div>
+  <div class="src">출처: <a href="https://alphasquare.co.kr/home/insight/posts/e0842819-8a2a-41da-9e1a-f909d512d135" target="_blank" rel="noopener">alphasquare.co.kr</a> · <a href="https://alphasquare.co.kr/home/insight/posts/5f0b85e7-fbd5-4e48-a40b-e20429338b97" target="_blank" rel="noopener">alphasquare.co.kr</a></div>
+</li>
+<li class="pick" data-code="0013Y0">
+  <div class="pick-head">
+    <span class="rank">2</span>
+    <h3><a href="https://m.stock.naver.com/domestic/stock/0013Y0" target="_blank" rel="noopener">엠에스바이오</a></h3>
+    <span class="chip 관심">관심</span>
+    <span class="code num">0013Y0</span>
+    <span class="score">점수 <b>71</b>/100</span>
+  </div>
+  <div class="biz">인체조직 이식재·의료기기 (치과 마이본, 안과 엠에스암니온, 피부 제너필-에이치 등)</div>
+  <p class="why">영업이익률 36%·PER 13배로 이익이 확실하고, 수요예측 1,097:1로 기관 수요도 강했습니다.</p>
+  <dl class="ticket">
+    <div class="buy"><dt>사는 주수</dt><dd><span class="q-shares num">101주</span> <small class="q-amount">50만원</small></dd></div>
+    <div><dt>현재가</dt><dd class="num">4,915</dd><small>공모가 7,800원 대비 <span class="num down">-37%</span></small></div>
+    <div><dt>손절가</dt><dd class="num down">3,930</dd><small>-20% · 손실 <span class="q-loss num">−10만원</span></small></div>
+    <div><dt>1개월 목표가</dt><dd class="num up">5,570</dd><small>+13% · 이익 <span class="q-gain num">+7만원</span></small></div>
+    <div><dt>목표가 근거</dt><dd style="font-size:.95rem">20일 평균가</dd><small>손익비 0.7</small></div>
+  </dl>
+  <div class="pros"><div><h4>좋은 점</h4><ul><li>2025년 매출 238억원(+32%), 2020년 이후 영업이익률 30%대 유지, PER 13배</li><li>2026년 상반기 매출 139억원(+26.5%), 회사 목표 연매출 356억원</li><li>수요예측 1,097:1, 참여 기관 100%가 밴드 상단 이상, 확약 30.6%</li></ul></div><div><h4>주의할 점</h4><ul><li>공모가 7,800원 대비 약 37% 아래, 상장일 고점 대비 -75%</li><li>피부 이식재 &#x27;제노패치&#x27; 특허 소송 진행 중</li><li>일간 변동성 10%</li></ul></div><div><h4>일정</h4><ul><li>보호예수 1개월 해제는 지났고 3개월 해제 2027-01-22</li><li>양막렌즈·스킨부스터 신제품 확대</li></ul></div></div>
+  <div class="src">출처: <a href="https://newstomato.com/ReadNews.aspx?no=1312993" target="_blank" rel="noopener">newstomato.com</a> · <a href="https://alphasquare.co.kr/home/insight/posts/2bf62edb-5189-4efc-b941-30d98fd3e226" target="_blank" rel="noopener">alphasquare.co.kr</a> · <a href="https://kormedi.com/2876904/" target="_blank" rel="noopener">kormedi.com</a> · <a href="https://newstomato.com/ReadNews.aspx?no=1316118" target="_blank" rel="noopener">newstomato.com</a></div>
+</li>
+<li class="pick" data-code="345290">
+  <div class="pick-head">
+    <span class="rank">3</span>
+    <h3><a href="https://m.stock.naver.com/domestic/stock/345290" target="_blank" rel="noopener">영광와이케이엠씨</a></h3>
+    <span class="chip 관찰">관찰</span>
+    <span class="code num">345290</span>
+    <span class="score">점수 <b>60</b>/100</span>
+  </div>
+  <div class="biz">반도체·디스플레이 장비 부품 가공·표면처리(아노다이징), 항공·방산 부품</div>
+  <p class="why">매출 +39%·흑자전환에 기관·외국인 동반 매수 중이지만, 확약이 낮아 12/16 물량 해제가 부담입니다.</p>
+  <dl class="ticket">
+    <div class="buy"><dt>사는 주수</dt><dd><span class="q-shares num">61주</span> <small class="q-amount">37만원</small></dd></div>
+    <div><dt>현재가</dt><dd class="num">6,050</dd><small>공모가 11,000원 대비 <span class="num down">-45%</span></small></div>
+    <div><dt>손절가</dt><dd class="num down">4,840</dd><small>-20% · 손실 <span class="q-loss num">−7만원</span></small></div>
+    <div><dt>1개월 목표가</dt><dd class="num up">6,940</dd><small>+15% · 이익 <span class="q-gain num">+5만원</span></small></div>
+    <div><dt>목표가 근거</dt><dd style="font-size:.95rem">20일 평균가</dd><small>손익비 0.7</small></div>
+  </dl>
+  <div class="pros"><div><h4>좋은 점</h4><ul><li>최근 연매출 +39%, 최근 분기 매출 YoY +95%, 영업이익 흑자전환</li><li>수요예측 1,163:1, 공모가 밴드 상단 확정</li><li>최근 기관·외국인 동반 순매수</li></ul></div><div><h4>주의할 점</h4><ul><li>확약 7.2%(1개월 이상은 1.8%)로 낮음</li><li>유통가능 비율이 1개월 뒤 47%, 3개월 뒤 53%로 커짐 → 2026-12-16 1개월 보호예수 해제 물량 부담</li><li>공모가 11,000원 대비 약 45% 아래</li></ul></div><div><h4>일정</h4><ul><li>1개월 보호예수 해제 2026-12-16</li></ul></div></div>
+  <div class="src">출처: <a href="https://newstomato.com/ReadNews.aspx?no=1319338" target="_blank" rel="noopener">newstomato.com</a> · <a href="https://alphasquare.co.kr/home/insight/posts/77f165b6-9552-40b6-8d0f-34d24a4c9655" target="_blank" rel="noopener">alphasquare.co.kr</a></div>
+</li>
+<li class="pick" data-code="420610">
+  <div class="pick-head">
+    <span class="rank">4</span>
+    <h3><a href="https://m.stock.naver.com/domestic/stock/420610" target="_blank" rel="noopener">인텔리빅스</a></h3>
+    <span class="chip 관찰">관찰</span>
+    <span class="code num">420610</span>
+    <span class="score">점수 <b>60</b>/100</span>
+  </div>
+  <div class="biz">AI 영상분석 솔루션 (대표주관 미래에셋증권)</div>
+  <p class="why">흑자 AI 기업(PER 10.7배)이고 공모가 9,000원까지 회복 여지가 있지만, 11/30 보호예수 해제가 코앞입니다.</p>
+  <dl class="ticket">
+    <div class="buy"><dt>사는 주수</dt><dd><span class="q-shares num">52주</span> <small class="q-amount">37만원</small></dd></div>
+    <div><dt>현재가</dt><dd class="num">7,180</dd><small>공모가 9,000원 대비 <span class="num down">-20%</span></small></div>
+    <div><dt>손절가</dt><dd class="num down">5,740</dd><small>-20% · 손실 <span class="q-loss num">−7만원</span></small></div>
+    <div><dt>1개월 목표가</dt><dd class="num up">9,000</dd><small>+25% · 이익 <span class="q-gain num">+9만원</span></small></div>
+    <div><dt>목표가 근거</dt><dd style="font-size:.95rem">공모가</dd><small>손익비 1.3</small></div>
+  </dl>
+  <div class="pros"><div><h4>좋은 점</h4><ul><li>최근 연매출 +37%, 영업이익률 약 10%로 흑자 AI 기업, PER 10.7배</li><li>수요예측 1,234:1, 공모가 밴드 상단 9,000원 확정</li></ul></div><div><h4>주의할 점</h4><ul><li>1개월 보호예수 해제가 2026-11-30(D-3)로 임박</li><li>최근 분기 매출 YoY -10%</li><li>공모가 대비 약 20% 아래, 확약 비율 미확인</li></ul></div><div><h4>일정</h4><ul><li>1개월 보호예수 해제 2026-11-30 이후 매물 소화 여부</li></ul></div></div>
+  <div class="src">출처: <a href="https://byline.network/2026/10/23-636/" target="_blank" rel="noopener">byline.network</a> · <a href="https://alphasquare.co.kr/home/insight/posts/fa04dc94-be43-4b99-a314-5339d052bd7c" target="_blank" rel="noopener">alphasquare.co.kr</a></div>
+</li>
+<li class="pick" data-code="0015M0">
+  <div class="pick-head">
+    <span class="rank">5</span>
+    <h3><a href="https://m.stock.naver.com/domestic/stock/0015M0" target="_blank" rel="noopener">디티에스</a></h3>
+    <span class="chip 관찰">관찰</span>
+    <span class="code num">0015M0</span>
+    <span class="score">점수 <b>59</b>/100</span>
+  </div>
+  <div class="biz">발전·석유화학 플랜트용 공랭식 열교환기(AFC·ACC), 다산네트웍스 자회사</div>
+  <p class="why">매출 1,427억·PER 5배대로 싸지만, 수출이 UAE에 몰려 있고 모회사 중복상장 우려가 있습니다.</p>
+  <dl class="ticket">
+    <div class="buy"><dt>사는 주수</dt><dd><span class="q-shares num">46주</span> <small class="q-amount">37만원</small></dd></div>
+    <div><dt>현재가</dt><dd class="num">8,060</dd><small>공모가 18,500원 대비 <span class="num down">-56%</span></small></div>
+    <div><dt>손절가</dt><dd class="num down">6,440</dd><small>-20% · 손실 <span class="q-loss num">−7만원</span></small></div>
+    <div><dt>1개월 목표가</dt><dd class="num up">10,870</dd><small>+35% · 이익 <span class="q-gain num">+13만원</span></small></div>
+    <div><dt>목표가 근거</dt><dd style="font-size:.95rem">20일 평균가</dd><small>손익비 1.7</small></div>
+  </dl>
+  <div class="pros"><div><h4>좋은 점</h4><ul><li>매출 2023년 758억 → 2025년 1,427억원, 영업이익 251억원, PER 5배대</li><li>수요예측 984:1, 공모가 밴드 상단 18,500원</li></ul></div><div><h4>주의할 점</h4><ul><li>수출 비중 97%, UAE 매출 비중 45%로 특정 국가 편중</li><li>모회사 중복상장 이슈, 차입금의 82%가 1년 내 만기</li><li>최근 분기 매출 YoY -15%, 공모가 대비 약 56% 아래</li></ul></div><div><h4>일정</h4><ul><li>1개월 보호예수 해제는 지났고 3개월 해제 2027-01-23</li></ul></div></div>
+  <div class="src">출처: <a href="https://newstomato.com/ReadNews.aspx?no=1314465" target="_blank" rel="noopener">newstomato.com</a> · <a href="https://alphasquare.co.kr/home/insight/posts/4d9d7d2e-3229-46a2-9390-0dcc869570f4" target="_blank" rel="noopener">alphasquare.co.kr</a> · <a href="https://alphasquare.co.kr/home/insight/posts/b090bcd8-1d88-4c03-a09c-741965e47905" target="_blank" rel="noopener">alphasquare.co.kr</a> · <a href="https://dealsite.co.kr/articles/170497" target="_blank" rel="noopener">dealsite.co.kr</a></div>
+</li>
+<li class="pick" data-code="271160">
+  <div class="pick-head">
+    <span class="rank">6</span>
+    <h3><a href="https://m.stock.naver.com/domestic/stock/271160" target="_blank" rel="noopener">하나에어로</a></h3>
+    <span class="chip 관찰">관찰</span>
+    <span class="code num">271160</span>
+    <span class="score">점수 <b>55</b>/100</span>
+  </div>
+  <div class="biz">항공기 구조물·치공구, 헬기 동체 조립 (Bell 412 동체 공급)</div>
+  <p class="why">공모가(5,700원) 근처에서 버티는 유일한 종목이고 Bell 헬기 동체 장기계약이 있지만, 변동성과 부채가 큽니다.</p>
+  <dl class="ticket">
+    <div class="buy"><dt>사는 주수</dt><dd><span class="q-shares num">65주</span> <small class="q-amount">37만원</small></dd></div>
+    <div><dt>현재가</dt><dd class="num">5,750</dd><small>공모가 5,700원 대비 <span class="num up">+1%</span></small></div>
+    <div><dt>손절가</dt><dd class="num down">4,600</dd><small>-20% · 손실 <span class="q-loss num">−7만원</span></small></div>
+    <div><dt>1개월 목표가</dt><dd class="num up">6,310</dd><small>+10% · 이익 <span class="q-gain num">+4만원</span></small></div>
+    <div><dt>목표가 근거</dt><dd style="font-size:.95rem">최근 20일 고점</dd><small>손익비 0.5</small></div>
+  </dl>
+  <div class="pros"><div><h4>좋은 점</h4><ul><li>Bell 과 2027~2031년 헬기 동체 최대 120대 장기 공급 계약</li><li>2026년 상반기 매출이 2025년 연매출(332억원)의 62% 수준</li><li>공모가 5,700원 근처(+1%)에서 거래 중인 유일한 상위 후보</li></ul></div><div><h4>주의할 점</h4><ul><li>확약 4.2%(대부분 15일), 일간 변동성 19%</li><li>부채비율 305%, 차입금 의존도가 업종 평균보다 높음</li></ul></div><div><h4>일정</h4><ul><li>1개월 보호예수 해제 2026-12-20</li></ul></div></div>
+  <div class="src">출처: <a href="https://newstomato.com/ReadNews.aspx?no=1314707" target="_blank" rel="noopener">newstomato.com</a> · <a href="https://www.newstomato.com/ReadNews.aspx?no=1319906" target="_blank" rel="noopener">newstomato.com</a> · <a href="https://alphasquare.co.kr/home/insight/posts/6acaf2b4-a14c-46a7-80e1-cfc2e5c3ba9d" target="_blank" rel="noopener">alphasquare.co.kr</a></div>
+</li>
+<li class="pick" data-code="439270">
+  <div class="pick-head">
+    <span class="rank">7</span>
+    <h3><a href="https://m.stock.naver.com/domestic/stock/439270" target="_blank" rel="noopener">크리에이츠</a></h3>
+    <span class="chip 관찰">관찰</span>
+    <span class="code num">439270</span>
+    <span class="score">점수 <b>55</b>/100</span>
+  </div>
+  <div class="biz">골프 론치모니터(해외 UNEEKOR, 국내 QED), 수출 비중 약 80%</div>
+  <p class="why">PSR 0.6배로 가장 싸지만, 거래가 적고 기관 확약이 거의 없어 소액만 담도록 계산했습니다.</p>
+  <dl class="ticket">
+    <div class="buy"><dt>사는 주수</dt><dd><span class="q-shares num">83주</span> <small class="q-amount">38만원</small></dd></div>
+    <div><dt>현재가</dt><dd class="num">4,600</dd><small>공모가 15,000원 대비 <span class="num down">-69%</span></small></div>
+    <div><dt>손절가</dt><dd class="num down">3,700</dd><small>-20% · 손실 <span class="q-loss num">−7만원</span></small></div>
+    <div><dt>1개월 목표가</dt><dd class="num up">6,900</dd><small>+50% · 이익 <span class="q-gain num">+19만원</span></small></div>
+    <div><dt>목표가 근거</dt><dd style="font-size:.95rem">최근 20일 고점(+50% 상한)</dd><small>손익비 2.6</small></div>
+  </dl>
+  <div class="pros"><div><h4>좋은 점</h4><ul><li>2025년 매출 1,042억원, 영업이익률 24%, PSR 0.6배로 후보 중 가장 저평가</li><li>LLM 기반 골프 AI 코칭 &#x27;AIMY&#x27; 4분기 출시 목표</li></ul></div><div><h4>주의할 점</h4><ul><li>수요예측 240:1, 공모가 밴드 하단 확정, 확약 기관 1곳(0.5%)</li><li>5일 평균 거래대금 3억원 미만으로 유동성 부족</li><li>1개월 보호예수 해제 2026-11-30(D-3)</li></ul></div><div><h4>일정</h4><ul><li>AIMY 출시</li><li>보호예수 해제 이후 거래 회복 여부</li></ul></div></div>
+  <div class="src">출처: <a href="https://newstomato.com/ReadNews.aspx?no=1312861" target="_blank" rel="noopener">newstomato.com</a> · <a href="https://alphasquare.co.kr/home/insight/posts/4d74ba25-e481-4eaa-8259-cd229cf1dec8" target="_blank" rel="noopener">alphasquare.co.kr</a></div>
+</li>
+<li class="pick" data-code="0161M0">
+  <div class="pick-head">
+    <span class="rank">8</span>
+    <h3><a href="https://m.stock.naver.com/domestic/stock/0161M0" target="_blank" rel="noopener">네오사피엔스</a></h3>
+    <span class="chip 관찰">관찰</span>
+    <span class="code num">0161M0</span>
+    <span class="score">점수 <b>55</b>/100</span>
+  </div>
+  <div class="biz">음성 합성 AI</div>
+  <p class="why">매출 +66%로 성장은 빠르나 아직 적자이고, 공모가를 밴드 아래로 낮춰 상장했습니다.</p>
+  <dl class="ticket">
+    <div class="buy"><dt>사는 주수</dt><dd><span class="q-shares num">84주</span> <small class="q-amount">40만원</small></dd></div>
+    <div><dt>현재가</dt><dd class="num">4,805</dd><small>공모가 10,000원 대비 <span class="num down">-52%</span></small></div>
+    <div><dt>손절가</dt><dd class="num down">3,915</dd><small>-19% · 손실 <span class="q-loss num">−7만원</span></small></div>
+    <div><dt>1개월 목표가</dt><dd class="num up">5,240</dd><small>+9% · 이익 <span class="q-gain num">+4만원</span></small></div>
+    <div><dt>목표가 근거</dt><dd style="font-size:.95rem">20일 평균가</dd><small>손익비 0.5</small></div>
+  </dl>
+  <div class="pros"><div><h4>좋은 점</h4><ul><li>최근 연매출 +66%, 영업적자 축소 중</li><li>최근 기관·외국인 동반 순매수</li></ul></div><div><h4>주의할 점</h4><ul><li>공모가를 밴드 하단(13,800원) 아래 10,000원으로 확정, 수요예측 220:1</li><li>1개월 이상 확약 0건</li><li>영업적자, 상장 전 자본잠식(공모로 해소됐는지 확인 필요), 공모가 대비 약 52% 아래</li></ul></div><div><h4>일정</h4><ul><li>3개월 보호예수 해제 2026-12-21</li></ul></div></div>
+  <div class="src">출처: <a href="https://alphasquare.co.kr/home/insight/posts/fe658362-3928-447f-b4ba-0e31f3f05183" target="_blank" rel="noopener">alphasquare.co.kr</a></div>
+</li>
+<li class="pick" data-code="0153R0">
+  <div class="pick-head">
+    <span class="rank">9</span>
+    <h3><a href="https://m.stock.naver.com/domestic/stock/0153R0" target="_blank" rel="noopener">바로팜</a></h3>
+    <span class="chip 보류">보류</span>
+    <span class="code num">0153R0</span>
+    <span class="score">점수 <b>47</b>/100</span>
+  </div>
+  <div class="biz">약국 통합 플랫폼</div>
+  <p class="why">매출 +113%로 성장은 빠르지만 적자이고, 공모 수요가 약했습니다(경쟁률 152:1, 확약 0%).</p>
+  <dl class="ticket">
+    <div class="buy"><dt>사는 주수</dt><dd><span class="q-shares num">44주</span> <small class="q-amount">25만원</small></dd></div>
+    <div><dt>현재가</dt><dd class="num">5,670</dd><small>공모가 16,400원 대비 <span class="num down">-65%</span></small></div>
+    <div><dt>손절가</dt><dd class="num down">4,535</dd><small>-20% · 손실 <span class="q-loss num">−5만원</span></small></div>
+    <div><dt>1개월 목표가</dt><dd class="num up">6,450</dd><small>+14% · 이익 <span class="q-gain num">+3만원</span></small></div>
+    <div><dt>목표가 근거</dt><dd style="font-size:.95rem">20일 평균가</dd><small>손익비 0.7</small></div>
+  </dl>
+  <div class="pros"><div><h4>좋은 점</h4><ul><li>최근 연매출 +113%, 분기 매출 YoY +78%</li><li>PSR 0.7배, 영업적자 축소 중</li></ul></div><div><h4>주의할 점</h4><ul><li>수요예측 152:1, 참여 건수 절반 이상이 밴드 하단 미만, 공모가 하단 확정</li><li>확약 0.03%</li><li>1개월 보호예수 해제 2026-12-11</li></ul></div><div><h4>일정</h4><ul><li>1개월 보호예수 해제 2026-12-11</li><li>환매청구권 가격 14,760원(일반청약자 대상)</li></ul></div></div>
+  <div class="src">출처: <a href="https://alphasquare.co.kr/home/insight/posts/9d5214e3-3bbb-4f18-806c-724532fae9a2" target="_blank" rel="noopener">alphasquare.co.kr</a> · <a href="https://www.medigatenews.com/news/3797261652" target="_blank" rel="noopener">medigatenews.com</a></div>
+</li>
+<li class="pick" data-code="266690">
+  <div class="pick-head">
+    <span class="rank">10</span>
+    <h3><a href="https://m.stock.naver.com/domestic/stock/266690" target="_blank" rel="noopener">덕산넵코어스</a></h3>
+    <span class="chip 보류">보류</span>
+    <span class="code num">266690</span>
+    <span class="score">점수 <b>46</b>/100</span>
+  </div>
+  <div class="biz">방산 항법장치</div>
+  <p class="why">방산 항법장치 업체로 흑자지만 성장이 더디고(매출 +7%) 확약이 4%로 낮았습니다.</p>
+  <dl class="ticket">
+    <div class="buy"><dt>사는 주수</dt><dd><span class="q-shares num">57주</span> <small class="q-amount">29만원</small></dd></div>
+    <div><dt>현재가</dt><dd class="num">5,120</dd><small>공모가 14,600원 대비 <span class="num down">-65%</span></small></div>
+    <div><dt>손절가</dt><dd class="num down">4,250</dd><small>-17% · 손실 <span class="q-loss num">−5만원</span></small></div>
+    <div><dt>1개월 목표가</dt><dd class="num up">5,770</dd><small>+13% · 이익 <span class="q-gain num">+4만원</span></small></div>
+    <div><dt>목표가 근거</dt><dd style="font-size:.95rem">20일 평균가</dd><small>손익비 0.7</small></div>
+  </dl>
+  <div class="pros"><div><h4>좋은 점</h4><ul><li>영업이익률 8.5% 흑자</li><li>수요예측 869:1, 공모가 밴드 상단</li></ul></div><div><h4>주의할 점</h4><ul><li>매출 성장 +7%, 최근 분기 YoY −4%</li><li>확약 4%</li><li>공모가 14,600원 대비 −65%</li></ul></div><div><h4>일정</h4><ul><li>상장 3개월 경과, 다음 보호예수 해제는 2027-03-30(6개월)</li></ul></div></div>
+  <div class="src">출처: <a href="https://alphasquare.co.kr/home/insight/posts/b629c07f-0723-4ae1-8792-9bef9d6a036a" target="_blank" rel="noopener">alphasquare.co.kr</a></div>
+</li></ol>
+</section>
+<section aria-labelledby="h-rest">
+  <h2 id="h-rest">나머지 후보</h2>
+  <p class="rest">엠비디 <span class="num">44</span>점, 이에스티 <span class="num">44</span>점, 영광 <span class="num">38</span>점, 글로벌테크놀로지 <span class="num">36</span>점, 스카이랩스 <span class="num">35</span>점, 옵토닉스 <span class="num">35</span>점, 와이즈플래닛컴퍼니 <span class="num">35</span>점, 넥스아이 <span class="num">18</span>점</p>
+  <p class="rest">오늘부터 보고서를 10종목 매매표 형식으로 바꿨습니다. 내일부터 전일 대비 순위 변동을 표시합니다.</p>
+</section>
 <footer>
-  <p>점수 100점 = 성장성 30 + 수익성 15 + 상장후 흐름 20 + 수급 15 + 공모 품질 10 + 밸류 10, 보호예수 해제 임박·과도한 변동성·고부채는 감점합니다. CANSLIM 을 상장 초기 종목에 맞게 바꾼 기준이며 65점 이상 관심, 50점 이상 관찰입니다.</p>
-  <p>시세·재무는 네이버 증권, 공모가·수요예측·확약 비율은 언론·IPO 정보 사이트 검색 결과입니다. DART 원문과 다를 수 있습니다. 생성 2026-11-27T12:31:53+09:00.</p>
-  <p>이 보고서는 투자 권유가 아닙니다. 매수·매도 판단과 그 결과의 책임은 투자자 본인에게 있습니다.</p>
+  <p>대상: 최근 90일 안에 상장한 코스피·코스닥 보통주 중 종가 10,000원 이하 (스팩·우선주·리츠 제외). 점수 100점 = 성장성 30 + 수익성 15 + 상장후 흐름 20 + 수급 15 + 공모 품질 10 + 밸류 10 − 감점. 65점 이상 관심, 50점 이상 관찰.</p>
+  <p>손절가 = 현재가 − 2×ATR(8~20% 범위). 1개월 목표가 = 현재가보다 8% 이상 위에 있는 가장 가까운 가격대(20일 평균가, 최근 20일 고점, 공모가). 주수 계산은 고정비율 방식입니다.</p>
+  <p>시세·재무는 네이버 증권, 공모가·수요예측·확약은 기사와 IPO 정보 사이트입니다. 생성 2026-11-27T12:46:39+09:00. 이 보고서는 투자 권유가 아니며, 매수·매도 판단과 책임은 투자자 본인에게 있습니다.</p>
 </footer>
 </div>
+<script type="application/json" id="plan-data">{"budget": 10000000, "risk": {"관심": [0.01, 0.15], "관찰": [0.0075, 0.1], "보류": [0.005, 0.05]}, "rows": [{"code": "179880", "grade": "관심", "entry": 9020.0, "stop": 7210, "target": 10670, "tv5": 2579321288.0}, {"code": "0013Y0", "grade": "관심", "entry": 4915.0, "stop": 3930, "target": 5570, "tv5": 3580154015.0}, {"code": "345290", "grade": "관찰", "entry": 6050.0, "stop": 4840, "target": 6940, "tv5": 5588985800.0}, {"code": "420610", "grade": "관찰", "entry": 7180.0, "stop": 5740, "target": 9000, "tv5": 2919100528.0}, {"code": "0015M0", "grade": "관찰", "entry": 8060.0, "stop": 6440, "target": 10870, "tv5": 1103804872.0}, {"code": "271160", "grade": "관찰", "entry": 5750.0, "stop": 4600, "target": 6310, "tv5": 29600660170.0}, {"code": "439270", "grade": "관찰", "entry": 4600.0, "stop": 3700, "target": 6900, "tv5": 279590866.0}, {"code": "0161M0", "grade": "관찰", "entry": 4805.0, "stop": 3915, "target": 5240, "tv5": 396361144.0}, {"code": "0153R0", "grade": "보류", "entry": 5670.0, "stop": 4535, "target": 6450, "tv5": 1664032002.0}, {"code": "266690", "grade": "보류", "entry": 5120.0, "stop": 4250, "target": 5770, "tv5": 844760819.0}]}</script>
+<script>
+(function(){
+  var data = JSON.parse(document.getElementById('plan-data').textContent);
+  var input = document.getElementById('budget');
+  var KEY = 'ipo-report-budget';
+  var fmt = function(n){ return Math.round(n).toLocaleString('ko-KR'); };
+  var man = function(n){ var s = n < 0 ? '−' : '+'; return s + fmt(Math.abs(n) / 1e4) + '만원'; };
+  function calc(budget){
+    var tot = {amt:0, gain:0, loss:0, n:0};
+    data.rows.forEach(function(r){
+      var rc = data.risk[r.grade] || data.risk['보류'];
+      var per = r.entry - r.stop;
+      var n = Math.min(per > 0 ? Math.floor(budget * rc[0] / per) : 0, Math.floor(budget * rc[1] / r.entry));
+      if (r.tv5) n = Math.min(n, Math.floor(r.tv5 * 0.02 / r.entry));
+      n = Math.max(0, n);
+      var amt = n * r.entry, gain = n * (r.target - r.entry), loss = n * (r.stop - r.entry);
+      tot.amt += amt; tot.gain += gain; tot.loss += loss; if (n > 0) tot.n++;
+      var el = document.querySelector('[data-code="' + r.code + '"]');
+      if (!el) return;
+      el.querySelector('.q-shares').textContent = fmt(n) + '주';
+      el.querySelector('.q-amount').textContent = fmt(amt / 1e4) + '만원';
+      el.querySelector('.q-gain').textContent = man(gain);
+      el.querySelector('.q-loss').textContent = man(loss);
+    });
+    document.getElementById('t-amt').textContent = fmt(tot.amt / 1e4) + '만원';
+    document.getElementById('t-cash').textContent = fmt((budget - tot.amt) / 1e4) + '만원';
+    document.getElementById('t-gain').textContent = man(tot.gain);
+    document.getElementById('t-loss').textContent = man(tot.loss);
+    document.querySelectorAll('.quick button').forEach(function(b){
+      b.setAttribute('aria-pressed', String(Number(b.dataset.v) === budget));
+    });
+  }
+  function parse(v){ var n = Number(String(v).replace(/[^0-9]/g, '')); return n > 0 ? n * 1e4 : 0; }
+  function set(budget, save){
+    input.value = fmt(budget / 1e4);
+    calc(budget);
+    if (save) { try { localStorage.setItem(KEY, String(budget)); } catch (e) {} }
+  }
+  input.addEventListener('input', function(){ var b = parse(input.value); if (b) { calc(b); try { localStorage.setItem(KEY, String(b)); } catch (e) {} } });
+  input.addEventListener('blur', function(){ var b = parse(input.value) || data.budget; set(b, true); });
+  document.querySelectorAll('.quick button').forEach(function(b){
+    b.addEventListener('click', function(){ set(Number(b.dataset.v), true); });
+  });
+  var saved = 0;
+  try { saved = Number(localStorage.getItem(KEY)) || 0; } catch (e) {}
+  set(saved || data.budget, false);
+})();
+</script>

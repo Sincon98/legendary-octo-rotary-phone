@@ -92,6 +92,8 @@ def test_render(tmp_path):
         "score": {"total": 72, "parts": {"G": 24, "P": 13, "N": 12, "S": 12, "I": 9, "V": 5, "penalty": -3},
                   "notes": ["근거"], "flags": ["보호예수 1개월 해제 2026-11-30 (D-3)"]},
         "grade": "관심",
+        "plan": {"entry": 9000, "stop": 7200, "stop_pct": -0.2, "target": 10670, "target_pct": 0.186,
+                 "target_basis": "20일 평균가", "rr": 0.93, "atr_pct": 0.12},
     }
     data = {"as_of": "20261127", "generated_at": "2026-11-27T17:45:00+09:00", "params": {"days": 90, "max_price": 10000},
             "market": {"코스닥": {"close": 695.2, "chg_1d": 0.06, "ret_20d": -0.04, "above_ma20": True}},
@@ -99,6 +101,26 @@ def test_render(tmp_path):
     md = render.to_markdown(data, {"summary": "요약"}, None)
     page = render.to_html(data, {"picks": {"179880": {"risks": ["<script>"]}}}, {"179880": 2})
     assert "장 마감 기준" in md and "테스트" in md
-    assert "&lt;script&gt;" in page and "<script>" not in page.split("</style>")[1]
+    assert "&lt;script&gt;" in page
+    assert page.count("<script") == 2  # 데이터 JSON + 계산 스크립트만
+    assert "| 1 | 테스트 | 관심 | 9,000 |" in md
     assert render.rank_change("179880", 1, {"179880": 2}) == "▲1"
     assert render.rank_change("x", 1, {"179880": 2}) == "신규"
+
+
+def test_plan_and_shares():
+    from ipo_report.plan import make_plan, shares, simulate, tick
+
+    assert tick(1999) == 1 and tick(4999) == 5 and tick(9000) == 10
+    bars = _bars([10000, 9000, 8800, 9100, 9300, 9200, 9400])
+    p = make_plan(bars, ipo_price=12000)
+    assert p["stop"] < p["entry"] < p["target"]
+    assert -0.20 <= p["stop_pct"] <= -0.08 and p["target_pct"] >= 0.08
+    s = shares(10_000_000, p, "관심")
+    assert s["shares"] * p["entry"] <= 10_000_000 * 0.15
+    assert -s["loss_at_stop"] <= 10_000_000 * 0.01 + 1
+    # 다음 날 저가가 손절가 아래면 손절로 끝난다
+    fut = pd.concat([bars, _bars([p["entry"]] * 20)], ignore_index=True)
+    fut.loc[len(bars), "low"] = p["stop"] - 10
+    r, how = simulate(fut, len(bars) - 1, p)
+    assert how == "stop" and r < 0

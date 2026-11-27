@@ -1,0 +1,2 @@
+Source: https://github.com/tradermonty/claude-trading-skills (commit 4623c0a), skills/position-sizer
+License: MIT (see LICENSE). Tests directory omitted.
